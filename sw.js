@@ -1,11 +1,14 @@
-const CACHE_NAME = 'caddyshot-v2';
+const CACHE_NAME = 'caddyshot-v3';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   'https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js',
   'https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css',
-  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap'
+  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap',
+  'https://cdn.tailwindcss.com',
+  'https://img.icons8.com/color/512/golf-ball.png',
+  'https://img.icons8.com/color/192/golf-ball.png'
 ];
 
 self.addEventListener('install', (e) => {

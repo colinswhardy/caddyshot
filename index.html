@@ -134,7 +134,7 @@
             <div class="flex items-center gap-1.5 bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-full border border-slate-800/80">
                 <span id="gpsStatusDot" class="w-2.5 h-2.5 rounded-full bg-yellow-500 pulse-dot"></span>
                 <span id="gpsStatusText" class="text-[9px] uppercase font-bold text-slate-300">Acquiring GPS</span>
-                <div id="simulatedIndicator" class="hidden ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[8px] font-bold">SIM</div>
+
             </div>
 
             <!-- Floating Distance yardage panel -->
@@ -164,7 +164,7 @@
         </div>
 
         <!-- Bottom Floating Control Card (Semi-transparent overlay, map texturable underneath) -->
-        <div class="absolute bottom-4 left-4 right-4 z-10 bg-slate-950/40 backdrop-blur-md border border-slate-800/40 rounded-2xl p-3 shadow-2xl flex flex-col space-y-3">
+        <div id="bottomControlCard" class="absolute bottom-4 left-4 right-4 z-10 bg-slate-950/40 backdrop-blur-md border border-slate-800/40 rounded-2xl p-3 shadow-2xl flex flex-col space-y-3">
                       <!-- Lie Selection Grid (Translucent see-through text-only buttons, 1/3 height) -->
             <div class="grid grid-cols-3 gap-1.5">
                 
@@ -386,7 +386,7 @@
                 <!-- Modal Footer -->
                 <div class="border-t border-slate-800 pt-3 flex gap-2">
                     <button onclick="closeCourseModal()" class="flex-1 bg-slate-850 hover:bg-slate-800 border border-slate-800 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-300">
-                        Cancel & Close
+                        Close
                     </button>
                     <button onclick="saveCourseSettings()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-950">
                         Save Coordinates
@@ -450,12 +450,12 @@
 
         // GPS state
         let userLocation = null;
-        let simulatedDistanceYards = null;
         let watchId = null;
 
         // MapLibre elements
         let map = null;
         let userMarker = null;
+        let userMarkerAdded = false;
         let greenMarker = null;
         let teeMarker = null;
 
@@ -463,6 +463,20 @@
         let isCaptureMode = false;
         let captureHoleNum = 1;
         let captureTarget = 'green'; // 'green' or 'tee'
+
+        // Lie button class constants (avoids rebuilding long strings on every selectLie call)
+        const LIE_BASE = 'py-1.5 rounded-lg border transition-all duration-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center';
+        const LIE_ACTIVE = `${LIE_BASE} bg-emerald-500/15 border-emerald-500/60 text-emerald-400 scale-[1.02] shadow-md shadow-emerald-950/30`;
+        const LIE_ACTIVE_PENALTY = `${LIE_BASE} bg-rose-500/15 border-rose-500/60 text-rose-400 scale-[1.02] shadow-md shadow-rose-950/30`;
+        const LIE_INACTIVE = `${LIE_BASE} bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 active:scale-95`;
+
+        // Utility: recalculate current shot count for the active hole
+        function recalcShotCount(shotsOverride) {
+            const shots = shotsOverride || getShotsFromStorage();
+            const holeShots = shots.filter(s => s && Number(s.hole) === Number(currentHole) && s.course === activeCourse);
+            const validShots = holeShots.filter(s => typeof s.shot === 'number' && !isNaN(s.shot));
+            currentShot = validShots.length > 0 ? Math.max(...validShots.map(s => s.shot)) + 1 : 1;
+        }
 
         // Load data on page launch
         window.addEventListener('DOMContentLoaded', () => {
@@ -657,24 +671,20 @@
 
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
-                    if (simulatedDistanceYards === null) {
-                        userLocation = {
-                            lat: position.coords.latitude,
-                            lon: position.coords.longitude
-                        };
-                        if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot";
-                        if (statusText) statusText.innerText = "GPS Active";
-                        recalculateDistance(false); // Update coordinates and distance quietly
-                    }
+                    userLocation = {
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    };
+                    if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot";
+                    if (statusText) statusText.innerText = "GPS Active";
+                    recalculateDistance(false);
                 },
                 (error) => {
                     console.warn("GPS Location Warning: ", error.message);
-                    if (simulatedDistanceYards === null) {
-                        if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
-                        if (statusText) statusText.innerText = "No GPS Signal";
-                        const distEl = document.getElementById('distanceDisplay');
-                        if (distEl && !isManualMode) distEl.innerText = "---";
-                    }
+                    if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+                    if (statusText) statusText.innerText = "No GPS Signal";
+                    const distEl = document.getElementById('distanceDisplay');
+                    if (distEl && !isManualMode) distEl.innerText = "---";
                 },
                 {
                     enableHighAccuracy: true,
@@ -698,15 +708,6 @@
                 if (isManualMode) {
                     const distEl = document.getElementById('distanceDisplay');
                     if (distEl) distEl.innerText = manualOverrideValue;
-                }
-
-                // Simulate mock user positions if active
-                if (simulatedDistanceYards !== null) {
-                    const degreeOffset = simulatedDistanceYards / 121390;
-                    userLocation = {
-                        lat: targetGreen.lat + degreeOffset,
-                        lon: targetGreen.lon
-                    };
                 }
 
                 if (!map || !greenMarker || !teeMarker || !userMarker) return;
@@ -740,7 +741,10 @@
 
                     userLngLat = [userLocation.lon, userLocation.lat];
                     userMarker.setLngLat(userLngLat);
-                    userMarker.addTo(map);
+                    if (!userMarkerAdded) {
+                        userMarker.addTo(map);
+                        userMarkerAdded = true;
+                    }
                 } else {
                     if (!isManualMode) {
                         const distEl = document.getElementById('distanceDisplay');
@@ -860,10 +864,7 @@
                 if (nextHole > 18) nextHole = 1;
                 currentHole = nextHole;
 
-                const shots = getShotsFromStorage() || [];
-                const holeShots = shots.filter(s => s && Number(s.hole) === Number(currentHole) && s.course === activeCourse);
-                const validShots = holeShots.filter(s => typeof s.shot === 'number' && !isNaN(s.shot));
-                currentShot = validShots.length > 0 ? Math.max(...validShots.map(s => s.shot)) + 1 : 1;
+                recalcShotCount();
 
                 if (currentShot === 1) {
                     selectLie('Tee');
@@ -903,26 +904,7 @@
             };
         }
 
-        // 5. GPS Simulation Toggles
-        function setSimulation(yards) {
-            simulatedDistanceYards = yards;
-            const simIndicator = document.getElementById('simulatedIndicator');
-            const statusDot = document.getElementById('gpsStatusDot');
-            const statusText = document.getElementById('gpsStatusText');
 
-            if (yards !== null) {
-                if (simIndicator) simIndicator.classList.remove('hidden');
-                if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 pulse-dot";
-                if (statusText) statusText.innerText = `Sim: ${yards} Yds`;
-                showToast(`Simulator Set to ${yards} Yards`);
-            } else {
-                if (simIndicator) simIndicator.classList.add('hidden');
-                if (statusDot) statusDot.className = userLocation ? "w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot" : "w-2.5 h-2.5 rounded-full bg-yellow-500 pulse-dot";
-                if (statusText) statusText.innerText = userLocation ? "GPS Active" : "Acquiring GPS";
-                showToast("Real GPS Restored");
-            }
-            recalculateDistance(true);
-        }
 
         // 6. Modal Numeric Keypad Override
         function openKeypadModal() {
@@ -1030,21 +1012,12 @@
         // 7. Lie selections (Glassmorphic Translucency styling logic)
         function selectLie(lie) {
             selectedLie = lie;
-            const lies = ['Tee', 'Fairway', 'Rough', 'Sand', 'Green', 'Penalty'];
-            
-            lies.forEach(l => {
+            ['Tee', 'Fairway', 'Rough', 'Sand', 'Green', 'Penalty'].forEach(l => {
                 const btn = document.getElementById(`lie-${l}`);
                 if (!btn) return;
-                
-                if (l === lie) {
-                    if (l === 'Penalty') {
-                        btn.className = "py-1.5 rounded-lg border transition-all duration-200 bg-rose-500/15 border-rose-500/60 text-rose-400 scale-[1.02] shadow-md shadow-rose-950/30 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center";
-                    } else {
-                        btn.className = "py-1.5 rounded-lg border transition-all duration-200 bg-emerald-500/15 border-emerald-500/60 text-emerald-400 scale-[1.02] shadow-md shadow-emerald-950/30 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center";
-                    }
-                } else {
-                    btn.className = "py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95";
-                }
+                btn.className = (l === lie)
+                    ? (l === 'Penalty' ? LIE_ACTIVE_PENALTY : LIE_ACTIVE)
+                    : LIE_INACTIVE;
             });
         }
 
@@ -1456,11 +1429,15 @@
             const mapEl = document.getElementById('map');
             if (!mapEl) return;
 
+            let pressStartX = 0, pressStartY = 0;
+
             mapEl.addEventListener('pointerdown', (e) => {
                 if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('.maplibregl-control-container')) {
                     return;
                 }
                 
+                pressStartX = e.clientX;
+                pressStartY = e.clientY;
                 if (pressTimer) clearTimeout(pressTimer);
                 pressTimer = setTimeout(() => {
                     toggleHUDVisibility();
@@ -1475,7 +1452,16 @@
             };
 
             mapEl.addEventListener('pointerup', cancelHandler);
-            mapEl.addEventListener('pointermove', cancelHandler);
+            mapEl.addEventListener('pointermove', (e) => {
+                if (pressTimer) {
+                    const dx = e.clientX - pressStartX;
+                    const dy = e.clientY - pressStartY;
+                    if (dx * dx + dy * dy > 100) {
+                        clearTimeout(pressTimer);
+                        pressTimer = null;
+                    }
+                }
+            });
             mapEl.addEventListener('pointercancel', cancelHandler);
         }
 
@@ -1483,7 +1469,7 @@
             isUIVisible = !isUIVisible;
             
             const header = document.querySelector('header');
-            const bottomCard = document.querySelector('.absolute.bottom-4.left-4.right-4');
+            const bottomCard = document.getElementById('bottomControlCard');
             const refreshGps = document.getElementById('refreshGpsContainer');
             const topBadges = document.getElementById('topBadges');
             
@@ -1552,7 +1538,7 @@
             `).join('');
         }
 
-        // Live Yardage edit handler (Quiet auto-saving, doesn't re-render list during input)
+        // Live Yardage edit handler
         function updateShotDistance(id, value) {
             let shots = getShotsFromStorage();
             const idx = shots.findIndex(s => s && s.id === id);
@@ -1561,22 +1547,15 @@
                 shots[idx].distance = parsed;
                 saveShotsToStorage(shots);
                 
-                // Update HUD currentShot Display
-                const currentHoleShots = shots.filter(s => s && s.course === activeCourse && s.hole === currentHole);
-                if (currentHoleShots.length > 0) {
-                    currentShot = Math.max(...currentHoleShots.map(s => s.shot)) + 1;
-                } else {
-                    currentShot = 1;
-                }
+                recalcShotCount();
                 const shotDisplay = document.getElementById('currentShotDisplay');
                 if (shotDisplay) shotDisplay.innerText = currentShot;
                 
-                // Update log count quietly
                 const activeCourseShots = shots.filter(s => s && s.course === activeCourse);
                 const countLabel = document.getElementById('logCount');
                 if (countLabel) countLabel.innerText = activeCourseShots.length;
                 
-                recalculateDistance(false); // Update distance display quietly
+                recalculateDistance(false);
             }
         }
 
@@ -1587,12 +1566,7 @@
             renderShotLog();
             showToast("Shot Deleted");
             
-            const currentHoleShots = shots.filter(s => s && s.course === activeCourse && s.hole === currentHole);
-            if (currentHoleShots.length > 0) {
-                currentShot = Math.max(...currentHoleShots.map(s => s.shot)) + 1;
-            } else {
-                currentShot = 1;
-            }
+            recalcShotCount();
             updateUI();
             recalculateDistance(true);
         }
@@ -1612,10 +1586,8 @@
             const activeCourseShots = shots.filter(s => s && s.course === activeCourse);
             
             if (activeCourseShots.length > 0) {
-                const highestHole = Math.max(...activeCourseShots.map(s => s.hole));
-                currentHole = highestHole;
-                const holeShots = activeCourseShots.filter(s => s && s.hole === currentHole);
-                currentShot = Math.max(...holeShots.map(s => s.shot)) + 1;
+                currentHole = Math.max(...activeCourseShots.map(s => s.hole));
+                recalcShotCount();
             } else {
                 currentHole = 1;
                 currentShot = 1;
@@ -1651,6 +1623,7 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+                URL.revokeObjectURL(url);
                 showToast("CSV Downloaded!");
             } catch (err) {
                 console.error("Export Error:", err);
