@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CaddyShot // Premium Golf Satellite Tracker</title>
+    <title>CaddyShot // GPS Satellite Hole Overview</title>
     
     <!-- Tailwind CSS v3 CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -33,9 +33,9 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Leaflet.js Mapping Library CSS & JS -->
-    <link class="leaflet-css" rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- MapLibre GL JS Mapping Library CSS & JS (WebGL accelerated with native rotation) -->
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
 
     <!-- Custom CSS -->
     <style>
@@ -58,12 +58,8 @@
         .pulse-dot {
             animation: pulse-emerald 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-        /* Dark map style adjustment */
-        .leaflet-container {
-            background: #020617;
-        }
-        /* Custom map control icons */
-        .custom-green-icon, .custom-user-icon {
+        /* Custom markers styling */
+        .custom-green-marker, .custom-tee-marker, .custom-user-marker {
             background: transparent;
             border: none;
         }
@@ -109,179 +105,152 @@
         </header>
 
         <!-- Coordinate Capture Mode Banner -->
-        <div id="captureBanner" class="hidden bg-amber-500/10 border-b border-amber-500/25 px-4 py-2 flex items-center justify-between text-xs z-10 animate-pulse">
-            <span class="text-amber-400 font-semibold flex items-center gap-1">
-                <span>🎯</span> Click Map to set Green for Hole <span id="captureHoleNum" class="font-extrabold">1</span>
+        <div id="captureBanner" class="hidden bg-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 flex items-center justify-between text-xs z-10 animate-pulse">
+            <span class="text-amber-300 font-bold flex items-center gap-1.5">
+                <span>🎯</span> Click Map to set <span id="captureTargetText" class="underline font-black text-white">Green Center</span> for Hole <span id="captureHoleNum" class="font-extrabold text-white">1</span>
             </span>
-            <button onclick="disableCaptureMode()" class="text-slate-400 hover:text-slate-200 underline font-bold">Cancel</button>
+            <button onclick="disableCaptureMode()" class="text-slate-300 hover:text-white underline font-bold uppercase text-[10px]">Cancel</button>
         </div>
 
-        <!-- Main Body Scroll Area -->
-        <main class="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-32">
+        <!-- MAIN Visual Map Component (Dominant screen viewport) -->
+        <div class="relative flex-1 bg-slate-950 border-b border-slate-800 overflow-hidden shadow-lg h-[42vh]">
+            <div id="map" class="w-full h-full"></div>
             
-            <!-- Map Container -->
-            <div class="relative bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
-                <div id="map" class="z-0"></div>
-                <!-- Satellite Imagery Watermark -->
-                <div class="absolute bottom-1 right-2 z-10 pointer-events-none text-[8px] text-white/50 uppercase tracking-widest bg-slate-950/40 px-1 py-0.5 rounded">
-                    Sat Imagery
-                </div>
-            </div>
-
-            <!-- GPS Yardage and Override Display Card -->
-            <div class="relative bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-5 text-center shadow-lg overflow-hidden">
-                <!-- Status Dots -->
-                <div class="absolute top-3 left-4 flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-0.5 rounded-full border border-slate-800/80">
-                    <span id="gpsStatusDot" class="w-2 h-2 rounded-full bg-yellow-500 pulse-dot"></span>
-                    <span id="gpsStatusText" class="text-[9px] uppercase font-bold text-slate-400">Acquiring GPS</span>
+            <!-- Floating Distance Overlay inside the Map -->
+            <div class="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none z-10">
+                <!-- GPS Badge -->
+                <div class="flex items-center gap-1.5 bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-full border border-slate-800">
+                    <span id="gpsStatusDot" class="w-2.5 h-2.5 rounded-full bg-yellow-500 pulse-dot"></span>
+                    <span id="gpsStatusText" class="text-[9px] uppercase font-bold text-slate-300">Acquiring GPS</span>
+                    <div id="simulatedIndicator" class="hidden ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[8px] font-bold">SIM</div>
                 </div>
 
-                <!-- Simulation Indicator -->
-                <div id="simulatedIndicator" class="hidden absolute top-3 right-4 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
-                    <span class="text-[9px] uppercase font-bold text-amber-400">Simulated</span>
-                </div>
-
-                <!-- Yardage Display -->
-                <div class="mt-4 py-2">
-                    <div class="flex justify-center items-baseline">
-                        <span id="distanceDisplay" class="text-7xl font-extrabold tracking-tighter text-slate-100 transition-all duration-150">---</span>
-                        <span class="text-2xl font-bold text-emerald-400 ml-1">YDS</span>
+                <!-- Floating Distance Panel -->
+                <div class="bg-slate-950/90 backdrop-blur border border-slate-800 rounded-xl px-4 py-1.5 flex flex-col items-center shadow-2xl">
+                    <div class="flex items-baseline">
+                        <span id="distanceDisplay" class="text-3xl font-black text-slate-100">---</span>
+                        <span class="text-xs font-bold text-emerald-400 ml-0.5">YDS</span>
                     </div>
-                    <!-- Override Status -->
-                    <div class="mt-1 flex items-center justify-center gap-2">
-                        <span id="distanceLabel" class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">To Green Center</span>
-                        <button onclick="clearManualOverride()" id="clearOverrideBtn" class="hidden text-[10px] bg-rose-500/10 border border-rose-500/20 text-rose-400 px-2 py-0.5 rounded hover:bg-rose-500/20 active:scale-95 transition-all">
-                            Use GPS
+                    <div class="flex items-center gap-1">
+                        <span id="distanceLabel" class="text-[8px] text-slate-500 uppercase tracking-widest font-bold">To Pin</span>
+                        <button onclick="clearManualOverride(); event.stopPropagation();" id="clearOverrideBtn" class="pointer-events-auto hidden text-[8px] bg-rose-500/20 border border-rose-500/30 text-rose-300 px-1 rounded hover:bg-rose-500/30">
+                            Clear
                         </button>
                     </div>
                 </div>
-
-                <!-- GPS Info & Refresh -->
-                <div class="border-t border-slate-800/60 pt-3 flex justify-between items-center text-xs">
-                    <span class="text-slate-500 text-[10px]" id="targetCoordsText">Pin Center: Loading...</span>
-                    <button onclick="refreshGPS()" class="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-bold active:scale-95 transition-all">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.228 10H18.228"/></svg>
-                        Refresh GPS
-                    </button>
-                </div>
             </div>
 
+            <!-- Satellite Imagery Label & Recenter Float -->
+            <div class="absolute bottom-3 right-3 z-10 flex flex-col gap-2 pointer-events-auto">
+                <button onclick="refreshGPS()" class="w-8 h-8 rounded-lg bg-slate-950/90 border border-slate-800 text-emerald-400 flex items-center justify-center shadow-lg hover:bg-slate-900 active:scale-90 transition-all">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.228 10H18.228"/></svg>
+                </button>
+            </div>
+            <div class="absolute bottom-3 left-3 z-10 pointer-events-none text-[8.5px] text-slate-400/70 font-semibold tracking-wider bg-slate-950/60 px-1.5 py-0.5 rounded border border-slate-850">
+                Tee Box (Bottom) ➔ Green (Top)
+            </div>
+        </div>
+
+        <!-- Bottom Controls Scroll Area -->
+        <main class="h-[38vh] flex flex-col justify-between overflow-y-auto px-4 py-3 space-y-3 no-scrollbar pb-24">
+            
             <!-- Lie Selection Grid -->
-            <div class="space-y-2">
-                <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center">Select Current Lie</div>
-                <div class="grid grid-cols-3 gap-2">
+            <div class="space-y-1">
+                <div class="grid grid-cols-3 gap-1.5">
                     
                     <!-- Tee Button -->
-                    <button onclick="selectLie('Tee')" id="lie-Tee" class="flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700 active:scale-95">
-                        <svg class="w-6 h-6 mb-1.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button onclick="selectLie('Tee')" id="lie-Tee" class="flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 active:scale-95">
+                        <svg class="w-5 h-5 mb-1 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="2" x2="12" y2="18" />
                             <ellipse cx="12" cy="2" rx="4" ry="1" />
                             <path d="M7 18h10M10 22h4" />
                         </svg>
-                        <span class="text-xs font-bold uppercase tracking-wide">Tee</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider">Tee</span>
                     </button>
 
                     <!-- Fairway Button -->
-                    <button onclick="selectLie('Fairway')" id="lie-Fairway" class="flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700 active:scale-95">
-                        <svg class="w-6 h-6 mb-1.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button onclick="selectLie('Fairway')" id="lie-Fairway" class="flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 active:scale-95">
+                        <svg class="w-5 h-5 mb-1 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 20c3-3 6-3 9 0s6 3 9 0" />
                             <path d="M3 16c3-2 6-2 9 0s6 2 9 0" />
                             <circle cx="12" cy="8" r="3" />
                         </svg>
-                        <span class="text-xs font-bold uppercase tracking-wide">Fairway</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider">Fairway</span>
                     </button>
 
                     <!-- Rough Button -->
-                    <button onclick="selectLie('Rough')" id="lie-Rough" class="flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700 active:scale-95">
-                        <svg class="w-6 h-6 mb-1.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button onclick="selectLie('Rough')" id="lie-Rough" class="flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 active:scale-95">
+                        <svg class="w-5 h-5 mb-1 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 22v-6M6 22v-9M9 22v-11M12 22v-7M15 22v-10M18 22v-8M21 22v-5" stroke-linecap="round"/>
                             <circle cx="12" cy="6" r="2" />
                         </svg>
-                        <span class="text-xs font-bold uppercase tracking-wide">Rough</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider">Rough</span>
                     </button>
 
                     <!-- Sand Button -->
-                    <button onclick="selectLie('Sand')" id="lie-Sand" class="flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700 active:scale-95">
-                        <svg class="w-6 h-6 mb-1.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button onclick="selectLie('Sand')" id="lie-Sand" class="flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 active:scale-95">
+                        <svg class="w-5 h-5 mb-1 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 18c2.5-1 5-2 8-1s5.5 2 10 0" />
-                            <circle cx="6" cy="11" r="0.5" fill="currentColor" />
-                            <circle cx="10" cy="13" r="0.5" fill="currentColor" />
-                            <circle cx="14" cy="10" r="0.5" fill="currentColor" />
-                            <circle cx="18" cy="12" r="0.5" fill="currentColor" />
                             <circle cx="12" cy="6" r="2.5" />
                         </svg>
-                        <span class="text-xs font-bold uppercase tracking-wide">Sand</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider">Sand</span>
                     </button>
 
                     <!-- Green Button -->
-                    <button onclick="selectLie('Green')" id="lie-Green" class="flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700 active:scale-95">
-                        <svg class="w-6 h-6 mb-1.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button onclick="selectLie('Green')" id="lie-Green" class="flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 active:scale-95">
+                        <svg class="w-5 h-5 mb-1 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2v20" />
                             <path d="M12 4l7 4-7 4" />
                             <ellipse cx="12" cy="21" rx="4" ry="1.5" />
                         </svg>
-                        <span class="text-xs font-bold uppercase tracking-wide">Green</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider">Green</span>
                     </button>
 
                     <!-- Penalty Button -->
-                    <button onclick="selectLie('Penalty')" id="lie-Penalty" class="flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700 active:scale-95">
-                        <svg class="w-6 h-6 mb-1.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button onclick="selectLie('Penalty')" id="lie-Penalty" class="flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-300 active:scale-95">
+                        <svg class="w-5 h-5 mb-1 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 9v4M12 17h.01M12 3a9 9 0 110 18 9 9 0 010-18z" stroke-linecap="round"/>
                         </svg>
-                        <span class="text-xs font-bold uppercase tracking-wide text-rose-400">Penalty</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-rose-400">Penalty</span>
                     </button>
 
                 </div>
             </div>
 
-            <!-- Dev Simulator Console -->
+            <!-- Dev GPS Simulator Console -->
             <div class="bg-slate-950/40 border border-slate-800/80 rounded-xl overflow-hidden transition-all duration-300 shadow">
-                <button onclick="toggleDevConsole()" class="w-full px-4 py-2 flex items-center justify-between text-slate-400 hover:text-slate-300 font-bold text-xs uppercase tracking-wider">
-                    <span class="flex items-center gap-1.5">
-                        <span>🛠️</span> Dev GPS Simulator
-                    </span>
-                    <svg id="devArrow" class="w-3.5 h-3.5 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                <button onclick="toggleDevConsole()" class="w-full px-4 py-1.5 flex items-center justify-between text-slate-400 hover:text-slate-300 font-bold text-[10px] uppercase tracking-wider">
+                    <span class="flex items-center gap-1.5">🛠️ Simulator</span>
+                    <svg id="devArrow" class="w-3 h-3 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
-                <div id="devConsoleContent" class="hidden border-t border-slate-800/40 p-3 bg-slate-950/60 grid grid-cols-2 gap-2 text-xs">
-                    <button onclick="setSimulation(null)" class="py-1.5 bg-slate-800 rounded font-semibold text-slate-300 hover:bg-slate-700 transition-all">
-                        Real Device GPS
-                    </button>
-                    <button onclick="setSimulation(250)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
-                        Mock 250 Yds
-                    </button>
-                    <button onclick="setSimulation(150)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
-                        Mock 150 Yds
-                    </button>
-                    <button onclick="setSimulation(75)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
-                        Mock 75 Yds
-                    </button>
-                    <button onclick="setSimulation(15)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
-                        Mock 15 Yds (Green)
-                    </button>
-                    <button onclick="setSimulation(3)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
-                        Mock 3 Yds (Putt)
-                    </button>
+                <div id="devConsoleContent" class="hidden border-t border-slate-800/40 p-2.5 bg-slate-950/60 grid grid-cols-3 gap-1.5 text-[10px]">
+                    <button onclick="setSimulation(null)" class="col-span-3 py-1 bg-slate-800 rounded font-semibold text-slate-300 hover:bg-slate-700">Real GPS</button>
+                    <button onclick="setSimulation(250)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">250 Yds</button>
+                    <button onclick="setSimulation(150)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">150 Yds</button>
+                    <button onclick="setSimulation(75)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">75 Yds</button>
+                    <button onclick="setSimulation(15)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">15 Yds</button>
+                    <button onclick="setSimulation(3)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">3 Yds</button>
                 </div>
             </div>
 
             <!-- Visual Shot History / Collapsible -->
             <div class="bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden transition-all duration-300">
-                <button onclick="toggleLog()" class="w-full px-4 py-3 bg-slate-950/60 flex items-center justify-between text-slate-300 hover:text-slate-100 font-bold text-xs uppercase tracking-wider">
+                <button onclick="toggleLog()" class="w-full px-4 py-2 bg-slate-950/60 flex items-center justify-between text-slate-400 hover:text-slate-200 font-bold text-[10px] uppercase tracking-wider">
                     <span>📋 Shot Log (<span id="logCount">0</span>)</span>
-                    <svg id="logArrow" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <svg id="logArrow" class="w-3.5 h-3.5 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
-                <div id="shotLogContainer" class="hidden border-t border-slate-800 max-h-[160px] overflow-y-auto divide-y divide-slate-850 no-scrollbar">
-                    <div id="emptyLogText" class="p-4 text-center text-xs text-slate-500 italic">No shots logged yet.</div>
+                <div id="shotLogContainer" class="hidden border-t border-slate-800 max-h-[110px] overflow-y-auto divide-y divide-slate-850 no-scrollbar">
+                    <div id="emptyLogText" class="p-3 text-center text-xs text-slate-500 italic">No shots logged yet.</div>
                 </div>
             </div>
 
         </main>
 
         <!-- Bottom Action Bar (Fixed at bottom of mobile viewport) -->
-        <footer class="absolute bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/85 p-4 z-10 space-y-2">
+        <footer class="absolute bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur border-t border-slate-800 p-4 z-10 space-y-2">
             
             <!-- Manual Distance Keypad Trigger Button -->
-            <button onclick="openKeypadModal()" class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-center text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 active:scale-95">
+            <button onclick="openKeypadModal()" class="w-full bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-center text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 active:scale-95">
                 <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                 Manual Distance Keypad (yards)
             </button>
@@ -293,17 +262,17 @@
 
             <!-- Secondary Actions Row -->
             <div class="flex gap-2">
-                <button onclick="copyCSVExport()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-300 border border-slate-800 font-bold py-1.5 rounded-lg text-[9.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-1">
+                <button onclick="copyCSVExport()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-300 border border-slate-800 font-bold py-1.5 rounded-lg text-[9px] uppercase tracking-wider transition-all">
                     Export CSV
                 </button>
-                <button onclick="confirmReset()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-rose-400 border border-slate-800 font-bold py-1.5 rounded-lg text-[9.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-1">
+                <button onclick="confirmReset()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-rose-400 border border-slate-800 font-bold py-1.5 rounded-lg text-[9px] uppercase tracking-wider transition-all">
                     Reset Round
                 </button>
             </div>
         </footer>
 
         <!-- Toast Notification Alert -->
-        <div id="toastAlert" class="pointer-events-none opacity-0 transform translate-y-3 transition-all duration-300 absolute bottom-28 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/90 text-white font-semibold text-xs py-2 px-4 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5">
+        <div id="toastAlert" class="pointer-events-none opacity-0 transform translate-y-3 transition-all duration-300 absolute bottom-32 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/95 text-white font-semibold text-xs py-2 px-4 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
             <span id="toastMessage">Copied!</span>
         </div>
@@ -311,12 +280,12 @@
     </div>
 
     <!-- ============================================== -->
-    <!-- MODAL POPUPS (Set to z-[9999] above Leaflet map) -->
+    <!-- MODAL POPUPS (Set to z-[9999] above MapLibre)  -->
     <!-- ============================================== -->
 
     <!-- 1. MANUAL KEYPAD OVERRIDE MODAL -->
     <div id="keypadModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-[300px] shadow-2xl flex flex-col items-stretch">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-[280px] shadow-2xl flex flex-col items-stretch">
             
             <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-1">Manual Distance Override</div>
             
@@ -329,19 +298,19 @@
             </div>
 
             <!-- Keyboard Layout -->
-            <div class="grid grid-cols-3 gap-1.5 mb-4">
-                <button onclick="pressModalKey('1')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">1</button>
-                <button onclick="pressModalKey('2')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">2</button>
-                <button onclick="pressModalKey('3')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">3</button>
-                <button onclick="pressModalKey('4')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">4</button>
-                <button onclick="pressModalKey('5')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">5</button>
-                <button onclick="pressModalKey('6')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">6</button>
-                <button onclick="pressModalKey('7')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">7</button>
-                <button onclick="pressModalKey('8')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">8</button>
-                <button onclick="pressModalKey('9')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">9</button>
-                <button onclick="pressModalKey('C')" class="py-2.5 bg-rose-950/40 border border-rose-900/30 active:scale-90 rounded-xl font-bold text-slate-400">C</button>
-                <button onclick="pressModalKey('0')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">0</button>
-                <button onclick="pressModalKey('⌫')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-slate-400 border border-slate-800/50">⌫</button>
+            <div class="grid grid-cols-3 gap-1.5 mb-4 text-center">
+                <button onclick="pressModalKey('1')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">1</button>
+                <button onclick="pressModalKey('2')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">2</button>
+                <button onclick="pressModalKey('3')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">3</button>
+                <button onclick="pressModalKey('4')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">4</button>
+                <button onclick="pressModalKey('5')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">5</button>
+                <button onclick="pressModalKey('6')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">6</button>
+                <button onclick="pressModalKey('7')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">7</button>
+                <button onclick="pressModalKey('8')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">8</button>
+                <button onclick="pressModalKey('9')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">9</button>
+                <button onclick="pressModalKey('C')" class="py-2.5 bg-rose-950/40 border border-rose-900/30 rounded-xl font-bold text-slate-400">C</button>
+                <button onclick="pressModalKey('0')" class="py-2.5 bg-slate-950 hover:bg-slate-850 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">0</button>
+                <button onclick="pressModalKey('⌫')" class="py-2.5 bg-slate-950 hover:bg-slate-800 rounded-xl font-bold text-slate-400 border border-slate-800/50">⌫</button>
             </div>
 
             <!-- Modal Action Buttons -->
@@ -363,7 +332,7 @@
             
             <!-- Modal Header -->
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-sm font-black text-slate-200 uppercase tracking-widest">Course Setup & Coordinates</h3>
+                <h3 class="text-sm font-black text-slate-200 uppercase tracking-widest">Settings Menu</h3>
                 <button onclick="closeCourseModal()" class="text-slate-500 hover:text-slate-300">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
@@ -376,7 +345,7 @@
                 <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-3">
                     <div class="flex items-center justify-between">
                         <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Select Active Course</label>
-                        <button onclick="deleteCurrentCourse()" id="btnDeleteCourse" class="text-[9px] text-rose-400 hover:underline">Delete Course</button>
+                        <button onclick="deleteCurrentCourse()" id="btnDeleteCourse" class="text-[9px] text-rose-400 hover:underline font-semibold">Delete Course</button>
                     </div>
                     <select id="courseSelect" onchange="onCourseSelectChange()" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-xs text-slate-200 font-bold focus:outline-none focus:border-emerald-500">
                         <!-- Populated by JavaScript -->
@@ -393,24 +362,21 @@
                     </div>
                 </div>
 
-                <!-- Capture Help Info Box -->
-                <div class="bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl text-[11px] text-emerald-400/80 leading-relaxed">
-                    <span class="font-extrabold uppercase text-[10px] text-emerald-400 block mb-0.5">💡 Pro-Tip: Fast Map Setup</span>
-                    Click the <span class="bg-slate-950 px-1 py-0.5 rounded text-amber-400 font-bold">🎯 Map</span> button on any hole row below, close the settings, and click on the satellite map where the green center is. It will capture the exact coordinates instantly!
-                </div>
-
-                <!-- 18 Hole Rows Input Editor -->
+                <!-- 18 Hole Rows Input Editor (Collapsible under Tee & Green GPS Editor button) -->
                 <div class="space-y-2">
-                    <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Hole Green Coordinates</div>
+                    <button onclick="toggleGpsEditorSection()" class="w-full bg-slate-950 border border-slate-850 hover:border-slate-800 text-slate-200 font-extrabold py-3 px-4 rounded-xl flex items-center justify-between transition-all active:scale-[0.98]">
+                        <span class="flex items-center gap-2 text-xs uppercase tracking-wider text-emerald-400 font-bold">
+                            <span>🎯</span> Tee & Green GPS Editor
+                        </span>
+                        <svg id="editorArrow" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
                     
-                    <div class="bg-slate-950/40 rounded-xl border border-slate-800 divide-y divide-slate-850 overflow-hidden">
-                        <div class="grid grid-cols-12 gap-1 px-3 py-2 text-[9px] text-slate-500 font-bold uppercase text-center bg-slate-950/60 border-b border-slate-800">
-                            <div class="col-span-2 text-left">Hole</div>
-                            <div class="col-span-4">Latitude</div>
-                            <div class="col-span-4">Longitude</div>
-                            <div class="col-span-2">Quick</div>
+                    <div id="gpsEditorSection" class="hidden space-y-3 mt-2">
+                        <div class="bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl text-[11px] text-emerald-400/80 leading-relaxed mb-2">
+                            <span class="font-extrabold uppercase text-[10px] text-emerald-400 block mb-0.5">💡 GPS Editor Mapping Instruction</span>
+                            Select the <span class="bg-slate-950 px-1 py-0.5 rounded text-amber-400 font-bold">🎯 Map</span> button on a Green or Tee box below, close the settings, and click/tap anywhere on the satellite map to save that spot's coordinates.
                         </div>
-                        <div id="holesInputsContainer" class="divide-y divide-slate-800 max-h-[300px] overflow-y-auto no-scrollbar">
+                        <div id="holesInputsContainer" class="space-y-3 max-h-[260px] overflow-y-auto pr-1 no-scrollbar">
                             <!-- JS generates 18 hole rows -->
                         </div>
                     </div>
@@ -418,7 +384,7 @@
 
                 <!-- Backup Import / Export JSON -->
                 <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2">
-                    <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Import / Export (JSON Block)</label>
+                    <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Import / Export (JSON Coordinates)</label>
                     <textarea id="courseJsonTextarea" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-[10px] font-mono text-slate-400 focus:outline-none focus:border-emerald-500" placeholder='Pasted Course JSON Coordinates here...'></textarea>
                     <div class="flex gap-2">
                         <button onclick="loadCoordsFromJson()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded-lg text-[10px] font-bold text-slate-300">
@@ -447,29 +413,29 @@
 
     <!-- JavaScript Application Logic -->
     <script>
-        // DEFAULT 18-HOLE DEMO DATABASE (Pebble Beach Golf Links green positions)
+        // DEFAULT 18-HOLE DEMO DATABASE (Pebble Beach Golf Links green and tee positions)
         const DEFAULT_COURSES = {
             "Pebble Beach": {
                 name: "Pebble Beach Golf Links",
                 holes: {
-                    1: { name: "Hole 1", lat: 36.568600, lon: -121.948200 },
-                    2: { name: "Hole 2", lat: 36.570500, lon: -121.951500 },
-                    3: { name: "Hole 3", lat: 36.569500, lon: -121.953500 },
-                    4: { name: "Hole 4", lat: 36.568100, lon: -121.956500 },
-                    5: { name: "Hole 5", lat: 36.568000, lon: -121.958500 },
-                    6: { name: "Hole 6", lat: 36.566500, lon: -121.959500 },
-                    7: { name: "Hole 7", lat: 36.564500, lon: -121.959800 },
-                    8: { name: "Hole 8", lat: 36.564100, lon: -121.956000 },
-                    9: { name: "Hole 9", lat: 36.563000, lon: -121.951000 },
-                    10: { name: "Hole 10", lat: 36.561500, lon: -121.947000 },
-                    11: { name: "Hole 11", lat: 36.563500, lon: -121.944000 },
-                    12: { name: "Hole 12", lat: 36.565200, lon: -121.944200 },
-                    13: { name: "Hole 13", lat: 36.567000, lon: -121.944800 },
-                    14: { name: "Hole 14", lat: 36.569500, lon: -121.943000 },
-                    15: { name: "Hole 15", lat: 36.571000, lon: -121.944000 },
-                    16: { name: "Hole 16", lat: 36.570800, lon: -121.947000 },
-                    17: { name: "Hole 17", lat: 36.569500, lon: -121.949000 },
-                    18: { name: "Hole 18", lat: 36.568300, lon: -121.951000 }
+                    1: { name: "Hole 1", lat: 36.568600, lon: -121.948200, teeLat: 36.566800, teeLon: -121.948400 },
+                    2: { name: "Hole 2", lat: 36.570500, lon: -121.951500, teeLat: 36.568700, teeLon: -121.949500 },
+                    3: { name: "Hole 3", lat: 36.569500, lon: -121.953500, teeLat: 36.570800, teeLon: -121.952000 },
+                    4: { name: "Hole 4", lat: 36.568100, lon: -121.956500, teeLat: 36.569500, teeLon: -121.954500 },
+                    5: { name: "Hole 5", lat: 36.568000, lon: -121.958500, teeLat: 36.568000, teeLon: -121.956800 },
+                    6: { name: "Hole 6", lat: 36.566500, lon: -121.959500, teeLat: 36.567800, teeLon: -121.959000 },
+                    7: { name: "Hole 7", lat: 36.564500, lon: -121.959800, teeLat: 36.566200, teeLon: -121.959600 },
+                    8: { name: "Hole 8", lat: 36.564100, lon: -121.956000, teeLat: 36.564400, teeLon: -121.959000 },
+                    9: { name: "Hole 9", lat: 36.563000, lon: -121.951000, teeLat: 36.564000, teeLon: -121.955500 },
+                    10: { name: "Hole 10", lat: 36.561500, lon: -121.947000, teeLat: 36.562800, teeLon: -121.950500 },
+                    11: { name: "Hole 11", lat: 36.563500, lon: -121.944000, teeLat: 36.561200, teeLon: -121.947000 },
+                    12: { name: "Hole 12", lat: 36.565200, lon: -121.944200, teeLat: 36.563600, teeLon: -121.944000 },
+                    13: { name: "Hole 13", lat: 36.567000, lon: -121.944800, teeLat: 36.565100, teeLon: -121.944200 },
+                    14: { name: "Hole 14", lat: 36.569500, lon: -121.943000, teeLat: 36.567100, teeLon: -121.944800 },
+                    15: { name: "Hole 15", lat: 36.571000, lon: -121.944000, teeLat: 36.569600, teeLon: -121.943100 },
+                    16: { name: "Hole 16", lat: 36.570800, lon: -121.947000, teeLat: 36.571100, teeLon: -121.944100 },
+                    17: { name: "Hole 17", lat: 36.569500, lon: -121.949000, teeLat: 36.570700, teeLon: -121.947200 },
+                    18: { name: "Hole 18", lat: 36.568300, lon: -121.951000, teeLat: 36.569400, teeLon: -121.949200 }
                 }
             }
         };
@@ -484,145 +450,171 @@
         // Manual override state
         let manualOverrideValue = '';
         let isManualMode = false;
-        let tempModalKeypadValue = ''; // keypad buffer in modal
+        let tempModalKeypadValue = '';
 
         // GPS state
         let userLocation = null;
         let simulatedDistanceYards = null;
         let watchId = null;
 
-        // Map instances
+        // MapLibre elements
         let map = null;
         let userMarker = null;
         let greenMarker = null;
-        let distanceLine = null;
+        let teeMarker = null;
 
-        // Capture Mode coordinates setup state
+        // Click Coordinate Capture Mode state
         let isCaptureMode = false;
         let captureHoleNum = 1;
+        let captureTarget = 'green'; // 'green' or 'tee'
 
-        // Load application data on start
+        // Load data on page launch
         window.addEventListener('DOMContentLoaded', () => {
             loadCoursesFromStorage();
             loadRoundState();
-            initLeafletMap();
+            initMapLibre();
             setupGeolocation();
             selectLie('Tee');
             renderShotLog();
         });
 
-        // 1. Initialise Leaflet satellite map
-        function initLeafletMap() {
-            const defaultHole = getActiveHoleCoords();
+        // 1. MapLibre GL JS Initialisation (Vector Satellite tiles with rotation)
+        function initMapLibre() {
+            const targetGreen = getActiveHoleCoords();
 
-            map = L.map('map', {
-                zoomControl: false,
-                attributionControl: false
-            }).setView([defaultHole.lat, defaultHole.lon], 18);
-
-            // Load ESRI Satellite Map Tiles (high quality, free usage, no credentials required)
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                maxZoom: 19
-            }).addTo(map);
-
-            // Custom green flag icon
-            const greenIcon = L.divIcon({
-                className: 'custom-green-icon',
-                html: `
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/25 border-2 border-emerald-400 shadow-lg shadow-slate-950/60">
-                        <svg class="w-4.5 h-4.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-                            <line x1="12" y1="2" x2="12" y2="22" />
-                            <path d="M12 4l9 4-9 4" fill="currentColor" fill-opacity="0.2"/>
-                        </svg>
-                    </div>
-                `,
-                iconSize: [32, 32],
-                iconAnchor: [12, 22]
+            map = new maplibregl.Map({
+                container: 'map',
+                style: {
+                    version: 8,
+                    sources: {
+                        'satellite-tiles': {
+                            type: 'raster',
+                            tiles: [
+                                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                            ],
+                            tileSize: 256
+                        }
+                    },
+                    layers: [
+                        {
+                            id: 'satellite-layer',
+                            type: 'raster',
+                            source: 'satellite-tiles',
+                            minzoom: 0,
+                            maxzoom: 19
+                        }
+                    ]
+                },
+                center: [targetGreen.lon, targetGreen.lat],
+                zoom: 16,
+                pitch: 0,
+                bearing: 0,
+                interactive: true
             });
 
-            // Custom user blue locator dot icon
-            const userIcon = L.divIcon({
-                className: 'custom-user-icon',
-                html: `
-                    <div class="relative w-6 h-6 flex items-center justify-center">
-                        <div class="absolute w-5 h-5 bg-blue-500 rounded-full opacity-40 animate-ping"></div>
-                        <div class="w-3.5 h-3.5 bg-blue-400 border-2 border-white rounded-full shadow-lg shadow-slate-950/80"></div>
-                    </div>
-                `,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
+            // Green flag element
+            const greenEl = document.createElement('div');
+            greenEl.className = 'custom-green-marker';
+            greenEl.innerHTML = `
+                <div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/25 border-2 border-emerald-400 shadow-lg shadow-slate-950/60">
+                    <svg class="w-4.5 h-4.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="3.5" viewBox="0 0 24 24">
+                        <line x1="12" y1="2" x2="12" y2="22" />
+                        <path d="M12 4l8 4-8 4" fill="currentColor" fill-opacity="0.3"/>
+                    </svg>
+                </div>
+            `;
+            greenMarker = new maplibregl.Marker({ element: greenEl })
+                .setLngLat([targetGreen.lon, targetGreen.lat])
+                .addTo(map);
+
+            // Tee box element
+            const teeEl = document.createElement('div');
+            teeEl.className = 'custom-tee-marker';
+            teeEl.innerHTML = `
+                <div class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-950/70 border-2 border-white shadow-md shadow-slate-950/80">
+                    <div class="w-2.5 h-2.5 bg-white rounded-full"></div>
+                </div>
+            `;
+            const teeLat = targetGreen.teeLat || (targetGreen.lat - 0.0012);
+            const teeLon = targetGreen.teeLon || targetGreen.lon;
+            teeMarker = new maplibregl.Marker({ element: teeEl })
+                .setLngLat([teeLon, teeLat])
+                .addTo(map);
+
+            // User location element
+            const userEl = document.createElement('div');
+            userEl.className = 'custom-user-marker';
+            userEl.innerHTML = `
+                <div class="relative w-6 h-6 flex items-center justify-center">
+                    <div class="absolute w-5 h-5 bg-blue-500 rounded-full opacity-40 animate-ping"></div>
+                    <div class="w-3.5 h-3.5 bg-blue-400 border-2 border-white rounded-full shadow-lg shadow-slate-950/80"></div>
+                </div>
+            `;
+            userMarker = new maplibregl.Marker({ element: userEl })
+                .setLngLat([teeLon, teeLat + 0.0003]); // default position near tee
+
+            // Draw connecting lines
+            map.on('load', () => {
+                map.addSource('route', {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'FeatureCollection',
+                        'features': [
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'LineString',
+                                    'coordinates': [
+                                        [teeLon, teeLat],
+                                        [targetGreen.lon, targetGreen.lat]
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                });
+
+                map.addLayer({
+                    'id': 'route-line',
+                    'type': 'line',
+                    'source': 'route',
+                    'layout': {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    'paint': {
+                        'line-color': '#34d399',
+                        'line-width': 2,
+                        'line-dasharray': [3, 4]
+                    }
+                });
+
+                recalculateDistance();
             });
 
-            // Green Pin marker
-            greenMarker = L.marker([defaultHole.lat, defaultHole.lon], { icon: greenIcon }).addTo(map);
-
-            // User locator marker (offset initially to show the line)
-            userMarker = L.marker([defaultHole.lat + 0.0012, defaultHole.lon], { icon: userIcon }).addTo(map);
-
-            // Dashed connection line
-            distanceLine = L.polyline([userMarker.getLatLng(), greenMarker.getLatLng()], {
-                color: '#34d399',
-                dashArray: '4, 8',
-                weight: 2
-            }).addTo(map);
-
-            // Map click handler (active in capture mode)
+            // Map click listener for coordinate captures
             map.on('click', (e) => {
                 if (isCaptureMode) {
-                    captureCoordinateFromMap(e.latlng.lat, e.latlng.lng);
+                    captureCoordinateFromMap(e.lngLat.lat, e.lngLat.lng);
                 }
             });
         }
 
-        // 2. Geolocation tracking
-        function setupGeolocation() {
-            const statusDot = document.getElementById('gpsStatusDot');
-            const statusText = document.getElementById('gpsStatusText');
-
-            if (!navigator.geolocation) {
-                statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
-                statusText.innerText = "GPS Not Supported";
-                return;
-            }
-
-            statusDot.className = "w-2 h-2 rounded-full bg-yellow-500 pulse-dot";
-            statusText.innerText = "Locating...";
-
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    // Update location unless simulated distance is active
-                    if (simulatedDistanceYards === null) {
-                        userLocation = {
-                            lat: position.coords.latitude,
-                            lon: position.coords.longitude
-                        };
-                        statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 pulse-dot";
-                        statusText.innerText = "GPS Active";
-                        recalculateDistance();
-                    }
-                },
-                (error) => {
-                    console.warn("GPS Warning:", error.message);
-                    if (simulatedDistanceYards === null) {
-                        statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
-                        statusText.innerText = "No GPS Signal";
-                        document.getElementById('distanceDisplay').innerText = "---";
-                    }
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 8000,
-                    maximumAge: 0
-                }
-            );
+        // Math: Geodesic bearing from point A to B
+        function calculateBearing(lat1, lon1, lat2, lon2) {
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const lat1Rad = lat1 * Math.PI / 180;
+            const lat2Rad = lat2 * Math.PI / 180;
+            
+            const y = Math.sin(dLon) * Math.cos(lat2Rad);
+            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+                      Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+                      
+            const brng = Math.atan2(y, x) * 180 / Math.PI;
+            return (brng + 360) % 360;
         }
 
-        function refreshGPS() {
-            setupGeolocation();
-            showToast("GPS Location Refreshed");
-        }
-
-        // Haversine geodesic yardage math
+        // Math: Geodesic distance in yards
         function calculateDistanceYards(lat1, lon1, lat2, lon2) {
             const R_earth_m = 6371000;
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -635,60 +627,144 @@
             return Math.round((R_earth_m * c) * 1.09361);
         }
 
+        // 2. Geolocation tracking Setup
+        function setupGeolocation() {
+            const statusDot = document.getElementById('gpsStatusDot');
+            const statusText = document.getElementById('gpsStatusText');
+
+            if (!navigator.geolocation) {
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+                statusText.innerText = "GPS Not Supported";
+                return;
+            }
+
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-500 pulse-dot";
+            statusText.innerText = "Locating...";
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    if (simulatedDistanceYards === null) {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        };
+                        statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot";
+                        statusText.innerText = "GPS Active";
+                        recalculateDistance();
+                    }
+                },
+                (error) => {
+                    console.warn("GPS Location Warning: ", error.message);
+                    if (simulatedDistanceYards === null) {
+                        statusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+                        statusText.innerText = "No GPS Signal";
+                        document.getElementById('distanceDisplay').innerText = "---";
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 8000,
+                    maximumAge: 0
+                }
+            );
+        }
+
         // 3. Map View Updates & Math Core
         function recalculateDistance() {
-            const target = getActiveHoleCoords();
-            document.getElementById('targetCoordsText').innerText = `Green Lat: ${target.lat.toFixed(6)}, Lon: ${target.lon.toFixed(6)}`;
+            const targetGreen = getActiveHoleCoords();
+            document.getElementById('targetCoordsText').innerText = `Pin: ${targetGreen.lat.toFixed(6)}, ${targetGreen.lon.toFixed(6)}`;
 
-            // If manual override is active, skip updates to screen display distance (but map line updates)
             if (isManualMode) {
                 document.getElementById('distanceDisplay').innerText = manualOverrideValue;
             }
 
-            // Simulate mock position if active
+            // Simulate mock user positions if active
             if (simulatedDistanceYards !== null) {
                 const degreeOffset = simulatedDistanceYards / 121390;
                 userLocation = {
-                    lat: target.lat + degreeOffset,
-                    lon: target.lon
+                    lat: targetGreen.lat + degreeOffset,
+                    lon: targetGreen.lon
                 };
             }
 
-            if (userLocation && map) {
-                const dist = calculateDistanceYards(
+            if (!map) return;
+
+            const greenLngLat = [targetGreen.lon, targetGreen.lat];
+            
+            // Handle Tee coordinates
+            const teeLat = targetGreen.teeLat || (targetGreen.lat - 0.0012);
+            const teeLon = targetGreen.teeLon || targetGreen.lon;
+            const teeLngLat = [teeLon, teeLat];
+
+            // Update flags on map
+            greenMarker.setLngLat(greenLngLat);
+            teeMarker.setLngLat(teeLngLat);
+
+            // Compute hole orientation angle (Tee ➔ Green)
+            const holeBearing = calculateBearing(teeLat, teeLon, targetGreen.lat, targetGreen.lon);
+            map.setBearing(holeBearing); // Auto-orient Green UP, Tee DOWN
+
+            let userLngLat = null;
+            if (userLocation) {
+                const distYards = calculateDistanceYards(
                     userLocation.lat, userLocation.lon,
-                    target.lat, target.lon
+                    targetGreen.lat, targetGreen.lon
                 );
 
                 if (!isManualMode) {
-                    document.getElementById('distanceDisplay').innerText = dist;
+                    document.getElementById('distanceDisplay').innerText = distYards;
                 }
 
-                // Update Map positions & polyline
-                const userLatLng = L.latLng(userLocation.lat, userLocation.lon);
-                const greenLatLng = L.latLng(target.lat, target.lon);
-
-                userMarker.setLatLng(userLatLng);
-                greenMarker.setLatLng(greenLatLng);
-                distanceLine.setLatLngs([userLatLng, greenLatLng]);
-
-                // Fit map screen dynamically
-                if (dist < 1000) {
-                    const bounds = L.latLngBounds([userLatLng, greenLatLng]);
-                    map.fitBounds(bounds, { padding: [35, 35] });
-                } else {
-                    map.setView(greenLatLng, 18);
-                }
+                userLngLat = [userLocation.lon, userLocation.lat];
+                userMarker.setLngLat(userLngLat);
+                userMarker.addTo(map);
             } else {
                 if (!isManualMode) {
                     document.getElementById('distanceDisplay').innerText = "---";
                 }
-                if (map) {
-                    const greenLatLng = L.latLng(target.lat, target.lon);
-                    greenMarker.setLatLng(greenLatLng);
-                    map.setView(greenLatLng, 18);
+                userMarker.remove();
+            }
+
+            // Update Map visual lines
+            const source = map.getSource('route');
+            if (source) {
+                const lineCoords = [
+                    userLngLat ? userLngLat : teeLngLat,
+                    greenLngLat
+                ];
+                source.setData({
+                    'type': 'FeatureCollection',
+                    'features': [{
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'LineString',
+                            'coordinates': lineCoords
+                        }
+                    }]
+                });
+            }
+
+            // Smart zoom: Fit Tee, Green, and User
+            let includeUserInZoom = false;
+            if (userLocation) {
+                const distFromGreen = calculateDistanceYards(userLocation.lat, userLocation.lon, targetGreen.lat, targetGreen.lon);
+                if (distFromGreen < 800) {
+                    includeUserInZoom = true;
                 }
             }
+
+            const bounds = new maplibregl.LngLatBounds();
+            bounds.extend(greenLngLat);
+            bounds.extend(teeLngLat);
+            if (includeUserInZoom && userLngLat) {
+                bounds.extend(userLngLat);
+            }
+
+            map.fitBounds(bounds, {
+                padding: 50,
+                maxZoom: 18,
+                duration: 600
+            });
         }
 
         // 4. Hole & Course Navigation
@@ -696,10 +772,8 @@
             let nextHole = currentHole + delta;
             if (nextHole < 1) nextHole = 18;
             if (nextHole > 18) nextHole = 1;
-            
             currentHole = nextHole;
-            
-            // Suggest shot counts and lies based on round status
+
             const shots = getShotsFromStorage();
             const holeShots = shots.filter(s => s.hole === currentHole && s.course === activeCourse);
             currentShot = holeShots.length > 0 ? Math.max(...holeShots.map(s => s.shot)) + 1 : 1;
@@ -712,7 +786,6 @@
                 selectLie('Fairway');
             }
 
-            // If in coordinate click capture mode, keep the capture target in sync
             if (isCaptureMode) {
                 setCaptureHole(currentHole);
             }
@@ -727,7 +800,7 @@
             if (courseData && courseData.holes[currentHole]) {
                 return courseData.holes[currentHole];
             }
-            return { lat: 36.568600, lon: -121.948200 }; // fallback
+            return { lat: 36.568600, lon: -121.948200, teeLat: 36.566800, teeLon: -121.948400 };
         }
 
         // 5. GPS Simulation Toggles
@@ -739,12 +812,12 @@
 
             if (yards !== null) {
                 simIndicator.classList.remove('hidden');
-                statusDot.className = "w-2 h-2 rounded-full bg-amber-500 pulse-dot";
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 pulse-dot";
                 statusText.innerText = `Sim: ${yards} Yds`;
                 showToast(`Simulator Set to ${yards} Yards`);
             } else {
                 simIndicator.classList.add('hidden');
-                statusDot.className = userLocation ? "w-2 h-2 rounded-full bg-emerald-500 pulse-dot" : "w-2 h-2 rounded-full bg-yellow-500 pulse-dot";
+                statusDot.className = userLocation ? "w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot" : "w-2.5 h-2.5 rounded-full bg-yellow-500 pulse-dot";
                 statusText.innerText = userLocation ? "GPS Active" : "Acquiring GPS";
                 showToast("Real GPS Restored");
             }
@@ -753,7 +826,6 @@
 
         // 6. Modal Numeric Keypad Override
         function openKeypadModal() {
-            // Populate value from current manual override value or blank
             tempModalKeypadValue = isManualMode ? manualOverrideValue : '';
             updateModalKeypadDisplay();
             document.getElementById('keypadModal').classList.remove('hidden');
@@ -797,7 +869,7 @@
         function clearManualOverride() {
             isManualMode = false;
             manualOverrideValue = '';
-            document.getElementById('distanceLabel').innerText = "To Green Center";
+            document.getElementById('distanceLabel').innerText = "To Pin";
             document.getElementById('clearOverrideBtn').classList.add('hidden');
             recalculateDistance();
         }
@@ -813,15 +885,15 @@
                 
                 if (l === lie) {
                     if (l === 'Penalty') {
-                        btn.className = "flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 bg-rose-950/40 border-rose-500 text-rose-300 scale-[1.03] shadow-md shadow-rose-950/50";
-                        svg.className = "w-6 h-6 mb-1.5 text-rose-400";
+                        btn.className = "flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 bg-rose-950/40 border-rose-500 text-rose-300 scale-[1.03] shadow-md shadow-rose-950/50";
+                        svg.className = "w-5 h-5 mb-1 text-rose-400";
                     } else {
-                        btn.className = "flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 bg-emerald-500/10 border-emerald-500 text-emerald-400 scale-[1.03] shadow-md shadow-emerald-950/50";
-                        svg.className = "w-6 h-6 mb-1.5 text-emerald-400";
+                        btn.className = "flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 bg-emerald-500/10 border-emerald-500 text-emerald-400 scale-[1.03] shadow-md shadow-emerald-950/50";
+                        svg.className = "w-5 h-5 mb-1 text-emerald-400";
                     }
                 } else {
-                    btn.className = "flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 active:scale-95";
-                    svg.className = "w-6 h-6 mb-1.5 text-slate-500";
+                    btn.className = "flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 active:scale-95";
+                    svg.className = "w-5 h-5 mb-1 text-slate-500";
                 }
             });
         }
@@ -835,7 +907,7 @@
             }
 
             const dist = parseInt(displayVal, 10);
-            const targetCoords = getActiveHoleCoords();
+            const targetGreen = getActiveHoleCoords();
             
             const newShot = {
                 id: Date.now(),
@@ -845,14 +917,13 @@
                 lie: selectedLie,
                 distance: dist,
                 isOverride: isManualMode,
-                greenLat: targetCoords.lat,
-                greenLon: targetCoords.lon,
+                greenLat: targetGreen.lat,
+                greenLon: targetGreen.lon,
                 timestamp: new Date().toISOString()
             };
 
             const shots = getShotsFromStorage();
             
-            // Avoid duplicate indexing by overwriting if Hole/Shot already exists
             const duplicateIndex = shots.findIndex(s => s.course === activeCourse && s.hole === currentHole && s.shot === currentShot);
             if (duplicateIndex !== -1) {
                 shots[duplicateIndex] = newShot;
@@ -865,10 +936,8 @@
 
             showToast(`Logged Hole ${currentHole} Shot ${currentShot}!`);
 
-            // Advance shot number
             currentShot += 1;
             
-            // Smart auto-lie logic:
             if (selectedLie === 'Green') {
                 selectLie('Green');
             } else if (selectedLie === 'Tee') {
@@ -881,18 +950,16 @@
             updateUI();
         }
 
-        // 9. Course Setup & Database Manager
+        // 9. Course Setup & Coordinate database manager
         function loadCoursesFromStorage() {
-            const raw = localStorage.getItem('caddyshot_courses');
+            const raw = localStorage.getItem('caddyshot_courses_v2');
             if (raw) {
                 courses = JSON.parse(raw);
             } else {
-                // Initialize default Pebble Beach
                 courses = JSON.parse(JSON.stringify(DEFAULT_COURSES));
-                localStorage.setItem('caddyshot_courses', JSON.stringify(courses));
+                localStorage.setItem('caddyshot_courses_v2', JSON.stringify(courses));
             }
             
-            // Load selected active course name
             const savedActive = localStorage.getItem('caddyshot_active_course');
             if (savedActive && courses[savedActive]) {
                 activeCourse = savedActive;
@@ -903,14 +970,14 @@
         }
 
         function saveCoursesToStorage() {
-            localStorage.setItem('caddyshot_courses', JSON.stringify(courses));
+            localStorage.setItem('caddyshot_courses_v2', JSON.stringify(courses));
             localStorage.setItem('caddyshot_active_course', activeCourse);
         }
 
         function openCourseModal() {
             populateCourseSelectDropdown();
             renderHolesEditorInputs();
-            exportCoordsToJson(); // pre-fill the export textbox
+            exportCoordsToJson();
             document.getElementById('courseModal').classList.remove('hidden');
         }
 
@@ -930,11 +997,9 @@
             activeCourse = select.value;
             localStorage.setItem('caddyshot_active_course', activeCourse);
             
-            // Refresh editor rows and JSON export textarea
             renderHolesEditorInputs();
             exportCoordsToJson();
             
-            // Reset state
             currentHole = 1;
             currentShot = 1;
             updateUI();
@@ -954,13 +1019,14 @@
                 return;
             }
 
-            // Seed new course with Hole 1 Pebble Beach coordinates as defaults
             const newHoles = {};
             for (let i = 1; i <= 18; i++) {
                 newHoles[i] = {
                     name: `Hole ${i}`,
                     lat: 36.568600,
-                    lon: -121.948200
+                    lon: -121.948200,
+                    teeLat: 36.566800,
+                    teeLon: -121.948400
                 };
             }
 
@@ -973,7 +1039,6 @@
             saveCoursesToStorage();
             input.value = '';
             
-            // Refresh dropdown/rows
             populateCourseSelectDropdown();
             renderHolesEditorInputs();
             exportCoordsToJson();
@@ -993,7 +1058,7 @@
                 return;
             }
 
-            if (confirm(`Are you sure you want to delete ${activeCourse}? This will clear all its coordinates.`)) {
+            if (confirm(`Are you sure you want to delete ${activeCourse}?`)) {
                 delete courses[activeCourse];
                 activeCourse = Object.keys(courses)[0];
                 saveCoursesToStorage();
@@ -1016,19 +1081,39 @@
 
             let html = '';
             for (let i = 1; i <= 18; i++) {
-                const h = holes[i] || { lat: 36.568600, lon: -121.948200 };
+                const h = holes[i] || { lat: 36.568600, lon: -121.948200, teeLat: 36.566800, teeLon: -121.948400 };
                 html += `
-                    <div class="grid grid-cols-12 gap-1 px-2 py-1.5 items-center text-xs">
-                        <div class="col-span-2 font-bold text-slate-300">#${i}</div>
-                        <div class="col-span-4">
-                            <input type="number" step="any" id="lat-input-${i}" value="${h.lat.toFixed(6)}" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[11px] text-slate-100 focus:outline-none focus:border-emerald-500">
+                    <div class="py-2.5 px-3 bg-slate-950/40 rounded-xl border border-slate-800 space-y-2">
+                        <div class="flex items-center justify-between text-[11px] font-extrabold uppercase text-slate-400">
+                            <span>Hole ${i}</span>
+                            <div class="flex gap-2">
+                                <button onclick="useCurrentCoordsForHole(${i}, 'green')" class="text-emerald-400 hover:underline">📍 Set Green Here</button>
+                                <button onclick="useCurrentCoordsForHole(${i}, 'tee')" class="text-slate-300 hover:underline">📍 Set Tee Here</button>
+                            </div>
                         </div>
-                        <div class="col-span-4">
-                            <input type="number" step="any" id="lon-input-${i}" value="${h.lon.toFixed(6)}" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[11px] text-slate-100 focus:outline-none focus:border-emerald-500">
-                        </div>
-                        <div class="col-span-2 flex gap-1 justify-center">
-                            <button onclick="useCurrentCoordsForHole(${i})" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 p-1 rounded transition-all" title="Use Current GPS Coordinates">📍</button>
-                            <button onclick="enableCaptureMode(${i})" class="bg-slate-800 hover:bg-slate-700 text-amber-400 p-1 rounded transition-all" title="Pick Coordinates on satellite Map">🎯</button>
+                        <div class="grid grid-cols-2 gap-2 text-[10px]">
+                            <!-- Green inputs -->
+                            <div class="bg-slate-900 border border-slate-850 p-2 rounded flex flex-col gap-1">
+                                <span class="text-emerald-400 font-bold uppercase text-[9px] flex items-center justify-between">
+                                    Green Center
+                                    <button onclick="enableCaptureMode(${i}, 'green')" class="text-amber-400 hover:underline font-bold text-[8.5px]">🎯 Map</button>
+                                </span>
+                                <div class="flex flex-col gap-1 mt-1">
+                                    <input type="number" step="any" id="lat-input-${i}" value="${h.lat.toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                    <input type="number" step="any" id="lon-input-${i}" value="${h.lon.toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                </div>
+                            </div>
+                            <!-- Tee inputs -->
+                            <div class="bg-slate-900 border border-slate-850 p-2 rounded flex flex-col gap-1">
+                                <span class="text-slate-300 font-bold uppercase text-[9px] flex items-center justify-between">
+                                    Tee Box
+                                    <button onclick="enableCaptureMode(${i}, 'tee')" class="text-amber-400 hover:underline font-bold text-[8.5px]">🎯 Map</button>
+                                </span>
+                                <div class="flex flex-col gap-1 mt-1">
+                                    <input type="number" step="any" id="tee-lat-input-${i}" value="${(h.teeLat || h.lat - 0.0012).toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                    <input type="number" step="any" id="tee-lon-input-${i}" value="${(h.teeLon || h.lon).toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1036,31 +1121,40 @@
             container.innerHTML = html;
         }
 
-        function useCurrentCoordsForHole(holeNum) {
+        function useCurrentCoordsForHole(holeNum, targetType) {
             if (!userLocation) {
                 alert("GPS coordinates not acquired yet. Please wait for a signal or use simulator.");
                 return;
             }
-            document.getElementById(`lat-input-${holeNum}`).value = userLocation.lat.toFixed(6);
-            document.getElementById(`lon-input-${holeNum}`).value = userLocation.lon.toFixed(6);
-            showToast(`Hole ${holeNum} set to current coordinates!`);
+            
+            if (targetType === 'green') {
+                document.getElementById(`lat-input-${holeNum}`).value = userLocation.lat.toFixed(6);
+                document.getElementById(`lon-input-${holeNum}`).value = userLocation.lon.toFixed(6);
+                showToast(`Hole ${holeNum} Green set to current location`);
+            } else {
+                document.getElementById(`tee-lat-input-${holeNum}`).value = userLocation.lat.toFixed(6);
+                document.getElementById(`tee-lon-input-${holeNum}`).value = userLocation.lon.toFixed(6);
+                showToast(`Hole ${holeNum} Tee set to current location`);
+            }
         }
 
         // Fast Coordinate Mapping Capture Workflow
-        function enableCaptureMode(holeNum) {
+        function enableCaptureMode(holeNum, type) {
             isCaptureMode = true;
             captureHoleNum = holeNum;
+            captureTarget = type;
             
-            // Sync active hole to coordinate being edited
+            // Focus map on the target hole
             currentHole = holeNum;
             updateUI();
             recalculateDistance();
 
             document.getElementById('captureHoleNum').innerText = holeNum;
+            document.getElementById('captureTargetText').innerText = type === 'green' ? 'Green Center' : 'Tee Box';
             document.getElementById('captureBanner').classList.remove('hidden');
             
             closeCourseModal();
-            showToast(`Capture Mode: Click map for Hole ${holeNum}`);
+            showToast(`Tap Map: Set ${type === 'green' ? 'Green' : 'Tee'} for Hole ${holeNum}`);
         }
 
         function disableCaptureMode() {
@@ -1071,23 +1165,37 @@
         function captureCoordinateFromMap(lat, lon) {
             if (!isCaptureMode) return;
             
-            // Update local memory coordinates
-            courses[activeCourse].holes[captureHoleNum].lat = lat;
-            courses[activeCourse].holes[captureHoleNum].lon = lon;
-            saveCoursesToStorage();
-            
-            showToast(`Saved Hole ${captureHoleNum} to Clicked Spot!`);
-            
-            // Advance to next hole automatically to make setting up complete courses fast
-            if (captureHoleNum < 18) {
-                captureHoleNum += 1;
-                currentHole = captureHoleNum;
-                document.getElementById('captureHoleNum').innerText = captureHoleNum;
-                updateUI();
-                recalculateDistance();
+            if (captureTarget === 'green') {
+                courses[activeCourse].holes[captureHoleNum].lat = lat;
+                courses[activeCourse].holes[captureHoleNum].lon = lon;
+                saveCoursesToStorage();
+                
+                showToast(`Saved Hole ${captureHoleNum} Green! Now tap Tee Box.`);
+                
+                // Prompt user to click the Tee Box next
+                captureTarget = 'tee';
+                document.getElementById('captureTargetText').innerText = 'Tee Box';
             } else {
-                disableCaptureMode();
-                showToast("All 18 holes captured!");
+                courses[activeCourse].holes[captureHoleNum].teeLat = lat;
+                courses[activeCourse].holes[captureHoleNum].teeLon = lon;
+                saveCoursesToStorage();
+                
+                showToast(`Saved Hole ${captureHoleNum} Tee!`);
+                
+                // Auto advance to next hole's green
+                if (captureHoleNum < 18) {
+                    captureHoleNum += 1;
+                    currentHole = captureHoleNum;
+                    captureTarget = 'green';
+                    
+                    document.getElementById('captureHoleNum').innerText = captureHoleNum;
+                    document.getElementById('captureTargetText').innerText = 'Green Center';
+                    
+                    updateUI();
+                } else {
+                    disableCaptureMode();
+                    showToast("Finished mapping all 18 holes!");
+                }
             }
             recalculateDistance();
         }
@@ -1097,10 +1205,16 @@
             for (let i = 1; i <= 18; i++) {
                 const latVal = parseFloat(document.getElementById(`lat-input-${i}`).value);
                 const lonVal = parseFloat(document.getElementById(`lon-input-${i}`).value);
+                const teeLatVal = parseFloat(document.getElementById(`tee-lat-input-${i}`).value);
+                const teeLonVal = parseFloat(document.getElementById(`tee-lon-input-${i}`).value);
                 
                 if (!isNaN(latVal) && !isNaN(lonVal)) {
                     courses[activeCourse].holes[i].lat = latVal;
                     courses[activeCourse].holes[i].lon = lonVal;
+                }
+                if (!isNaN(teeLatVal) && !isNaN(teeLonVal)) {
+                    courses[activeCourse].holes[i].teeLat = teeLatVal;
+                    courses[activeCourse].holes[i].teeLon = teeLonVal;
                 }
             }
 
@@ -1122,20 +1236,21 @@
             try {
                 const parsed = JSON.parse(textarea.value);
                 
-                // Validate coordinates structure
                 for (let i = 1; i <= 18; i++) {
                     if (!parsed[i] || typeof parsed[i].lat !== 'number' || typeof parsed[i].lon !== 'number') {
-                        throw new Error(`Missing or malformed coordinates for Hole ${i}`);
+                        throw new Error(`Missing Green coordinates for Hole ${i}`);
                     }
+                    if (typeof parsed[i].teeLat !== 'number') parsed[i].teeLat = parsed[i].lat - 0.0012;
+                    if (typeof parsed[i].teeLon !== 'number') parsed[i].teeLon = parsed[i].lon;
                 }
                 
                 courses[activeCourse].holes = parsed;
                 saveCoursesToStorage();
                 renderHolesEditorInputs();
                 recalculateDistance();
-                showToast("JSON Coordinates Imported!");
+                showToast("Coordinates Imported!");
             } catch(e) {
-                alert(`Import failed: ${e.message}. Format must match exact export layout.`);
+                alert(`Import failed: ${e.message}.`);
             }
         }
 
@@ -1148,18 +1263,17 @@
             document.getElementById('logCount').innerText = activeCourseShots.length;
 
             if (activeCourseShots.length === 0) {
-                container.innerHTML = `<div id="emptyLogText" class="p-4 text-center text-xs text-slate-500 italic">No shots logged yet.</div>`;
+                container.innerHTML = `<div id="emptyLogText" class="p-3 text-center text-xs text-slate-500 italic">No shots logged yet.</div>`;
                 return;
             }
 
-            // Sort: highest hole first, highest shot first
             const sorted = [...activeCourseShots].sort((a, b) => {
                 if (a.hole !== b.hole) return b.hole - a.hole;
                 return b.shot - a.shot;
             });
 
             container.innerHTML = sorted.map(s => `
-                <div class="px-4 py-2.5 flex items-center justify-between text-xs hover:bg-slate-850/50 transition-all">
+                <div class="px-4 py-2 flex items-center justify-between text-xs hover:bg-slate-850/50 transition-all">
                     <div class="flex items-center gap-2.5">
                         <span class="bg-slate-950 px-2 py-0.5 rounded font-extrabold text-[10px] text-emerald-400 border border-slate-800">H${s.hole}</span>
                         <div class="flex flex-col">
@@ -1184,7 +1298,6 @@
             renderShotLog();
             showToast("Shot Deleted");
             
-            // Adjust current shot index back
             const currentHoleShots = shots.filter(s => s.course === activeCourse && s.hole === currentHole);
             if (currentHoleShots.length > 0) {
                 currentShot = Math.max(...currentHoleShots.map(s => s.shot)) + 1;
@@ -1196,12 +1309,12 @@
 
         // Helper storage get/set
         function getShotsFromStorage() {
-            const raw = localStorage.getItem('caddyshot_round_overhaul');
+            const raw = localStorage.getItem('caddyshot_round_overhaul_v2');
             return raw ? JSON.parse(raw) : [];
         }
 
         function saveShotsToStorage(shots) {
-            localStorage.setItem('caddyshot_round_overhaul', JSON.stringify(shots));
+            localStorage.setItem('caddyshot_round_overhaul_v2', JSON.stringify(shots));
         }
 
         function loadRoundState() {
@@ -1214,7 +1327,7 @@
                 const holeShots = activeCourseShots.filter(s => s.hole === currentHole);
                 currentShot = Math.max(...holeShots.map(s => s.shot)) + 1;
             } else {
-                currentHole = 1; // Always start on hole 1
+                currentHole = 1;
                 currentShot = 1;
             }
             updateUI();
@@ -1247,10 +1360,10 @@
         function confirmReset() {
             if (confirm("Are you sure you want to clear all logged shots for this course? This cannot be undone.")) {
                 let shots = getShotsFromStorage();
-                shots = shots.filter(s => s.course !== activeCourse); // Clear only active course shots
+                shots = shots.filter(s => s.course !== activeCourse);
                 saveShotsToStorage(shots);
                 
-                currentHole = 1; // Reset to Hole 1
+                currentHole = 1;
                 currentShot = 1;
                 selectLie('Tee');
                 clearManualOverride();
@@ -1275,8 +1388,7 @@
             if (dev.classList.contains('hidden')) {
                 dev.classList.remove('hidden');
                 arrow.classList.add('rotate-180');
-                // Trigger map refresh to ensure Leaflet size bounds are calculated
-                if (map) setTimeout(() => map.invalidateSize(), 50);
+                if (map) setTimeout(() => map.resize(), 50);
             } else {
                 dev.classList.add('hidden');
                 arrow.classList.remove('rotate-180');
@@ -1295,15 +1407,27 @@
             }
         }
 
+        function toggleGpsEditorSection() {
+            const section = document.getElementById('gpsEditorSection');
+            const arrow = document.getElementById('editorArrow');
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                arrow.classList.add('rotate-180');
+            } else {
+                section.classList.add('hidden');
+                arrow.classList.remove('rotate-180');
+            }
+        }
+
         // Flash beautiful toast message
         function showToast(msg) {
             const toast = document.getElementById('toastAlert');
             const message = document.getElementById('toastMessage');
             message.innerText = msg;
-            toast.className = "absolute bottom-28 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/95 text-white font-semibold text-xs py-2.5 px-5 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 transition-all duration-300 transform scale-100 opacity-100";
+            toast.className = "absolute bottom-32 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/95 text-white font-semibold text-xs py-2.5 px-5 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 transition-all duration-300 transform scale-100 opacity-100";
             
             setTimeout(() => {
-                toast.className = "pointer-events-none opacity-0 transform translate-y-3 transition-all duration-300 absolute bottom-28 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/90 text-white font-semibold text-xs py-2 px-4 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5";
+                toast.className = "pointer-events-none opacity-0 transform translate-y-3 transition-all duration-300 absolute bottom-32 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/90 text-white font-semibold text-xs py-2 px-4 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5";
             }, 2300);
         }
     </script>
