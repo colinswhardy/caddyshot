@@ -142,8 +142,9 @@
 
             <!-- Satellite Imagery Label & Recenter Float -->
             <div class="absolute bottom-3 right-3 z-10 flex flex-col gap-2 pointer-events-auto">
-                <button onclick="refreshGPS()" class="w-8 h-8 rounded-lg bg-slate-950/90 border border-slate-800 text-emerald-400 flex items-center justify-center shadow-lg hover:bg-slate-900 active:scale-90 transition-all">
-                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.228 10H18.228"/></svg>
+                <button onclick="refreshGPS()" class="px-2.5 py-1.5 bg-slate-950/90 hover:bg-slate-900 active:scale-90 border border-slate-800 rounded-lg text-emerald-400 font-extrabold text-[9px] uppercase tracking-wider flex items-center gap-1 shadow-lg transition-all">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.228 10H18.228"/></svg>
+                    Refresh GPS
                 </button>
             </div>
             <div class="absolute bottom-3 left-3 z-10 pointer-events-none text-[8.5px] text-slate-400/70 font-semibold tracking-wider bg-slate-950/60 px-1.5 py-0.5 rounded border border-slate-850">
@@ -257,7 +258,7 @@
 
             <!-- Main ENTER SHOT Button -->
             <button onclick="submitShot()" id="enterShotBtn" class="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-bold py-3.5 rounded-xl text-center text-sm uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all">
-                Enter Shot
+                Shot Complete
             </button>
 
             <!-- Secondary Actions Row -->
@@ -314,14 +315,18 @@
             </div>
 
             <!-- Modal Action Buttons -->
-            <div class="flex gap-2">
+            <div class="flex gap-2 mb-2">
                 <button onclick="closeKeypadModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-300">
                     Cancel
                 </button>
-                <button onclick="applyKeypadOverride()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-950">
-                    Apply
+                <button onclick="addManualShot()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-950">
+                    Add Shot
                 </button>
             </div>
+            <!-- Finish Hole Button -->
+            <button onclick="finishHole()" class="w-full bg-slate-950 hover:bg-slate-850 border border-slate-800 text-rose-400 font-extrabold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 text-center">
+                🏁 Finish Hole
+            </button>
 
         </div>
     </div>
@@ -853,17 +858,65 @@
             display.innerText = tempModalKeypadValue === '' ? '---' : tempModalKeypadValue;
         }
 
-        function applyKeypadOverride() {
-            if (tempModalKeypadValue === '') {
-                clearManualOverride();
-            } else {
-                isManualMode = true;
-                manualOverrideValue = tempModalKeypadValue;
-                document.getElementById('distanceLabel').innerText = "Manual Override";
-                document.getElementById('clearOverrideBtn').classList.remove('hidden');
-                recalculateDistance();
+        function addManualShot() {
+            const displayVal = document.getElementById('modalKeypadValue').innerText;
+            if (displayVal === '---' || displayVal === '0' || displayVal === '') {
+                showToast("Please enter a distance first");
+                return;
             }
+
+            const dist = parseInt(displayVal, 10);
+            const targetGreen = getActiveHoleCoords();
+            
+            const newShot = {
+                id: Date.now(),
+                course: activeCourse,
+                hole: currentHole,
+                shot: currentShot,
+                lie: selectedLie,
+                distance: dist,
+                isOverride: true,
+                greenLat: targetGreen.lat,
+                greenLon: targetGreen.lon,
+                timestamp: new Date().toISOString()
+            };
+
+            const shots = getShotsFromStorage();
+            const duplicateIndex = shots.findIndex(s => s.course === activeCourse && s.hole === currentHole && s.shot === currentShot);
+            if (duplicateIndex !== -1) {
+                shots[duplicateIndex] = newShot;
+            } else {
+                shots.push(newShot);
+            }
+
+            saveShotsToStorage(shots);
+            renderShotLog();
+
+            showToast(`Logged Shot ${currentShot}: ${dist} YDS (${selectedLie})`);
+
+            // Increment shot index
+            currentShot += 1;
+            updateUI();
+
+            // Clear manual override buffer inside modal
+            tempModalKeypadValue = '';
+            updateModalKeypadDisplay();
+        }
+
+        function finishHole() {
             closeKeypadModal();
+            clearManualOverride();
+            
+            let nextHole = currentHole + 1;
+            if (nextHole > 18) nextHole = 1;
+            
+            currentHole = nextHole;
+            currentShot = 1;
+            selectLie('Tee');
+            
+            updateUI();
+            recalculateDistance();
+            showToast(`Hole Completed! Moving to Hole ${currentHole}`);
         }
 
         function clearManualOverride() {
@@ -1092,18 +1145,7 @@
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2 text-[10px]">
-                            <!-- Green inputs -->
-                            <div class="bg-slate-900 border border-slate-850 p-2 rounded flex flex-col gap-1">
-                                <span class="text-emerald-400 font-bold uppercase text-[9px] flex items-center justify-between">
-                                    Green Center
-                                    <button onclick="enableCaptureMode(${i}, 'green')" class="text-amber-400 hover:underline font-bold text-[8.5px]">🎯 Map</button>
-                                </span>
-                                <div class="flex flex-col gap-1 mt-1">
-                                    <input type="number" step="any" id="lat-input-${i}" value="${h.lat.toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
-                                    <input type="number" step="any" id="lon-input-${i}" value="${h.lon.toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
-                                </div>
-                            </div>
-                            <!-- Tee inputs -->
+                            <!-- Tee inputs (Left) -->
                             <div class="bg-slate-900 border border-slate-850 p-2 rounded flex flex-col gap-1">
                                 <span class="text-slate-300 font-bold uppercase text-[9px] flex items-center justify-between">
                                     Tee Box
@@ -1112,6 +1154,17 @@
                                 <div class="flex flex-col gap-1 mt-1">
                                     <input type="number" step="any" id="tee-lat-input-${i}" value="${(h.teeLat || h.lat - 0.0012).toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
                                     <input type="number" step="any" id="tee-lon-input-${i}" value="${(h.teeLon || h.lon).toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                </div>
+                            </div>
+                            <!-- Green inputs (Right) -->
+                            <div class="bg-slate-900 border border-slate-850 p-2 rounded flex flex-col gap-1">
+                                <span class="text-emerald-400 font-bold uppercase text-[9px] flex items-center justify-between">
+                                    Green Center
+                                    <button onclick="enableCaptureMode(${i}, 'green')" class="text-amber-400 hover:underline font-bold text-[8.5px]">🎯 Map</button>
+                                </span>
+                                <div class="flex flex-col gap-1 mt-1">
+                                    <input type="number" step="any" id="lat-input-${i}" value="${h.lat.toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                    <input type="number" step="any" id="lon-input-${i}" value="${h.lon.toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
                                 </div>
                             </div>
                         </div>
