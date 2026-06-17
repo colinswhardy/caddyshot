@@ -148,6 +148,9 @@
                     <button onclick="clearManualOverride(); event.stopPropagation();" id="clearOverrideBtn" class="pointer-events-auto hidden text-[8px] bg-rose-500/20 border border-rose-500/30 text-rose-300 px-1 rounded hover:bg-rose-500/30">
                         Clear
                     </button>
+                    <button onclick="clearLayupPoint(); event.stopPropagation();" id="clearSpotBtn" class="pointer-events-auto hidden text-[8px] bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 px-1 rounded hover:bg-yellow-500/30 ml-1">
+                        Clear Spot
+                    </button>
                 </div>
             </div>
         </div>
@@ -162,56 +165,37 @@
 
         <!-- Bottom Floating Control Card (Semi-transparent overlay, map texturable underneath) -->
         <div class="absolute bottom-4 left-4 right-4 z-10 bg-slate-950/40 backdrop-blur-md border border-slate-800/40 rounded-2xl p-3 shadow-2xl flex flex-col space-y-3">
-            
-            <!-- Lie Selection Grid (Translucent see-through buttons) -->
+                      <!-- Lie Selection Grid (Translucent see-through text-only buttons, 1/3 height) -->
             <div class="grid grid-cols-3 gap-1.5">
                 
                 <!-- Tee Button -->
-                <button onclick="selectLie('Tee')" id="lie-Tee" class="flex flex-col items-center justify-center py-2 rounded-xl border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 backdrop-blur-sm active:scale-95">
-                    <svg class="w-4.5 h-4.5 mb-0.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="2" x2="12" y2="18" /><ellipse cx="12" cy="2" rx="4" ry="1" /><path d="M7 18h10M10 22h4" />
-                    </svg>
-                    <span class="text-[9px] font-bold uppercase tracking-wider">Tee</span>
+                <button onclick="selectLie('Tee')" id="lie-Tee" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                    Tee
                 </button>
 
                 <!-- Fairway Button -->
-                <button onclick="selectLie('Fairway')" id="lie-Fairway" class="flex flex-col items-center justify-center py-2 rounded-xl border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 backdrop-blur-sm active:scale-95">
-                    <svg class="w-4.5 h-4.5 mb-0.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 20c3-3 6-3 9 0s6 3 9 0M3 16c3-2 6-2 9 0s6 2 9 0" /><circle cx="12" cy="8" r="2.5" />
-                    </svg>
-                    <span class="text-[9px] font-bold uppercase tracking-wider">Fairway</span>
+                <button onclick="selectLie('Fairway')" id="lie-Fairway" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                    Fairway
                 </button>
 
                 <!-- Rough Button -->
-                <button onclick="selectLie('Rough')" id="lie-Rough" class="flex flex-col items-center justify-center py-2 rounded-xl border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 backdrop-blur-sm active:scale-95">
-                    <svg class="w-4.5 h-4.5 mb-0.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 22v-5M6 22v-8M9 22v-10M12 22v-6M15 22v-9M18 22v-7M21 22v-4" stroke-linecap="round"/><circle cx="12" cy="5" r="1.5" />
-                    </svg>
-                    <span class="text-[9px] font-bold uppercase tracking-wider">Rough</span>
+                <button onclick="selectLie('Rough')" id="lie-Rough" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                    Rough
                 </button>
 
                 <!-- Sand Button -->
-                <button onclick="selectLie('Sand')" id="lie-Sand" class="flex flex-col items-center justify-center py-2 rounded-xl border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 backdrop-blur-sm active:scale-95">
-                    <svg class="w-4.5 h-4.5 mb-0.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 18c2.5-1 5-2 8-1s5.5 2 10 0" /><circle cx="12" cy="6" r="2.5" />
-                    </svg>
-                    <span class="text-[9px] font-bold uppercase tracking-wider">Sand</span>
+                <button onclick="selectLie('Sand')" id="lie-Sand" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                    Sand
                 </button>
 
                 <!-- Green Button -->
-                <button onclick="selectLie('Green')" id="lie-Green" class="flex flex-col items-center justify-center py-2 rounded-xl border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 backdrop-blur-sm active:scale-95">
-                    <svg class="w-4.5 h-4.5 mb-0.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v20M12 4l7 4-7 4" /><ellipse cx="12" cy="21" rx="4" ry="1.5" />
-                    </svg>
-                    <span class="text-[9px] font-bold uppercase tracking-wider">Green</span>
+                <button onclick="selectLie('Green')" id="lie-Green" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                    Green
                 </button>
 
                 <!-- Penalty Button -->
-                <button onclick="selectLie('Penalty')" id="lie-Penalty" class="flex flex-col items-center justify-center py-2 rounded-xl border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 backdrop-blur-sm active:scale-95">
-                    <svg class="w-4.5 h-4.5 mb-0.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 9v4M12 17h.01M12 3a9 9 0 110 18 9 9 0 010-18z" stroke-linecap="round"/>
-                    </svg>
-                    <span class="text-[9px] font-bold uppercase tracking-wider text-rose-400">Penalty</span>
+                <button onclick="selectLie('Penalty')" id="lie-Penalty" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                    Penalty
                 </button>
 
             </div>
@@ -397,20 +381,6 @@
                         </div>
                     </div>
 
-                    <!-- Backup Import / Export JSON -->
-                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-2">
-                        <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Import / Export (JSON Coordinates)</label>
-                        <textarea id="courseJsonTextarea" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-[10px] font-mono text-slate-400 focus:outline-none focus:border-emerald-500" placeholder='Pasted Course JSON Coordinates here...'></textarea>
-                        <div class="flex gap-2">
-                            <button onclick="loadCoordsFromJson()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded-lg text-[10px] font-bold text-slate-300">
-                                Import JSON
-                            </button>
-                            <button onclick="exportCoordsToJson()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded-lg text-[10px] font-bold text-slate-300">
-                                Generate JSON
-                            </button>
-                        </div>
-                    </div>
-
                 </div>
 
                 <!-- Modal Footer -->
@@ -500,6 +470,7 @@
             loadRoundState();
             initMapLibre();
             setupGeolocation();
+            setupLongPressHUDToggle();
             selectLie('Tee');
             renderShotLog();
         });
@@ -623,10 +594,12 @@
                     }
                 });
 
-                // Map click listener for coordinate captures
+                // Map click listener for coordinate captures & layup points
                 map.on('click', (e) => {
                     if (isCaptureMode) {
                         captureCoordinateFromMap(e.lngLat.lat, e.lngLat.lng);
+                    } else {
+                        setLayupPoint(e.lngLat.lat, e.lngLat.lng);
                     }
                 });
 
@@ -779,10 +752,19 @@
                 // Update Map visual lines
                 const source = map.getSource('route');
                 if (source) {
-                    const lineCoords = [
-                        userLngLat ? userLngLat : teeLngLat,
-                        greenLngLat
-                    ];
+                    let lineCoords = [];
+                    if (layupPoint) {
+                        lineCoords = [
+                            teeLngLat,
+                            [layupPoint.lon, layupPoint.lat],
+                            greenLngLat
+                        ];
+                    } else {
+                        lineCoords = [
+                            userLngLat ? userLngLat : teeLngLat,
+                            greenLngLat
+                        ];
+                    }
                     source.setData({
                         'type': 'FeatureCollection',
                         'features': [{
@@ -793,6 +775,50 @@
                             }
                         }]
                     });
+                }
+
+                // Draw/Update Midpoint labels if layup is active
+                if (layupPoint) {
+                    const dist1 = calculateDistanceYards(teeLat, teeLon, layupPoint.lat, layupPoint.lon);
+                    const dist2 = calculateDistanceYards(layupPoint.lat, layupPoint.lon, targetGreen.lat, targetGreen.lon);
+
+                    const midLat1 = (teeLat + layupPoint.lat) / 2;
+                    const midLon1 = (teeLon + layupPoint.lon) / 2;
+                    const midLat2 = (layupPoint.lat + targetGreen.lat) / 2;
+                    const midLon2 = (layupPoint.lon + targetGreen.lon) / 2;
+
+                    // Update Midpoint Marker 1
+                    if (midpointMarker1) {
+                        midpointMarker1.setLngLat([midLon1, midLat1]);
+                        midpointMarker1.getElement().innerHTML = `<div class="bg-slate-950/80 border border-slate-800/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-black text-yellow-400 shadow shadow-slate-950/50">${dist1} YDS</div>`;
+                    } else {
+                        const el = document.createElement('div');
+                        el.innerHTML = `<div class="bg-slate-950/80 border border-slate-800/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-black text-yellow-400 shadow shadow-slate-950/50">${dist1} YDS</div>`;
+                        midpointMarker1 = new maplibregl.Marker({ element: el })
+                            .setLngLat([midLon1, midLat1])
+                            .addTo(map);
+                    }
+
+                    // Update Midpoint Marker 2
+                    if (midpointMarker2) {
+                        midpointMarker2.setLngLat([midLon2, midLat2]);
+                        midpointMarker2.getElement().innerHTML = `<div class="bg-slate-950/80 border border-slate-800/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-black text-emerald-400 shadow shadow-slate-950/50">${dist2} YDS</div>`;
+                    } else {
+                        const el = document.createElement('div');
+                        el.innerHTML = `<div class="bg-slate-950/80 border border-slate-800/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-black text-emerald-400 shadow shadow-slate-950/50">${dist2} YDS</div>`;
+                        midpointMarker2 = new maplibregl.Marker({ element: el })
+                            .setLngLat([midLon2, midLat2])
+                            .addTo(map);
+                    }
+                } else {
+                    if (midpointMarker1) {
+                        midpointMarker1.remove();
+                        midpointMarker1 = null;
+                    }
+                    if (midpointMarker2) {
+                        midpointMarker2.remove();
+                        midpointMarker2 = null;
+                    }
                 }
 
                 // Smart zoom viewport sizing: fits elements between top badges and bottom controls
@@ -810,6 +836,9 @@
                     bounds.extend(teeLngLat);
                     if (includeUserInZoom && userLngLat) {
                         bounds.extend(userLngLat);
+                    }
+                    if (layupPoint) {
+                        bounds.extend([layupPoint.lon, layupPoint.lat]);
                     }
 
                     map.fitBounds(bounds, {
@@ -851,6 +880,7 @@
                 }
 
                 clearManualOverride();
+                clearLayupPoint();
                 updateUI();
                 recalculateDistance(true); // Zoom to fit new hole coordinates
             } catch(err) {
@@ -973,6 +1003,7 @@
         function finishHole() {
             closeKeypadModal();
             clearManualOverride();
+            clearLayupPoint();
             
             let nextHole = currentHole + 1;
             if (nextHole > 18) nextHole = 1;
@@ -1004,19 +1035,15 @@
             lies.forEach(l => {
                 const btn = document.getElementById(`lie-${l}`);
                 if (!btn) return;
-                const svg = btn.querySelector('svg');
                 
                 if (l === lie) {
                     if (l === 'Penalty') {
-                        btn.className = "flex flex-col items-center justify-center py-2 rounded-xl border transition-all duration-200 bg-rose-500/15 border-rose-500/60 text-rose-400 scale-[1.02] shadow-md shadow-rose-950/30 backdrop-blur-sm";
-                        if (svg) svg.className = "w-4.5 h-4.5 mb-0.5 text-rose-400";
+                        btn.className = "py-1.5 rounded-lg border transition-all duration-200 bg-rose-500/15 border-rose-500/60 text-rose-400 scale-[1.02] shadow-md shadow-rose-950/30 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center";
                     } else {
-                        btn.className = "flex flex-col items-center justify-center py-2 rounded-xl border transition-all duration-200 bg-emerald-500/15 border-emerald-500/60 text-emerald-400 scale-[1.02] shadow-md shadow-emerald-950/30 backdrop-blur-sm";
-                        if (svg) svg.className = "w-4.5 h-4.5 mb-0.5 text-emerald-400";
+                        btn.className = "py-1.5 rounded-lg border transition-all duration-200 bg-emerald-500/15 border-emerald-500/60 text-emerald-400 scale-[1.02] shadow-md shadow-emerald-950/30 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center";
                     }
                 } else {
-                    btn.className = "flex flex-col items-center justify-center py-2 rounded-xl border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm active:scale-95";
-                    if (svg) svg.className = "w-4.5 h-4.5 mb-0.5 text-slate-500";
+                    btn.className = "py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95";
                 }
             });
         }
@@ -1100,7 +1127,6 @@
         function openCourseModal() {
             populateCourseSelectDropdown();
             renderHolesEditorInputs();
-            exportCoordsToJson();
             document.getElementById('courseModal').classList.remove('hidden');
         }
 
@@ -1125,7 +1151,6 @@
             localStorage.setItem('caddyshot_active_course', activeCourse);
             
             renderHolesEditorInputs();
-            exportCoordsToJson();
             
             currentHole = 1;
             currentShot = 1;
@@ -1178,7 +1203,6 @@
             
             populateCourseSelectDropdown();
             renderHolesEditorInputs();
-            exportCoordsToJson();
             
             showToast(`Created Course: ${name}`);
             
@@ -1202,7 +1226,6 @@
                 
                 populateCourseSelectDropdown();
                 renderHolesEditorInputs();
-                exportCoordsToJson();
                 
                 showToast("Course deleted");
                 currentHole = 1;
@@ -1375,36 +1398,113 @@
             }
         }
 
-        // Export active course JSON coordinates
-        function exportCoordsToJson() {
-            const activeHoles = courses[activeCourse].holes;
-            const textEl = document.getElementById('courseJsonTextarea');
-            if (textEl) textEl.value = JSON.stringify(activeHoles, null, 2);
+        // State for layup intermediate points & long hold HUD toggle
+        let layupPoint = null; // { lat, lon }
+        let layupMarker = null;
+        let midpointMarker1 = null;
+        let midpointMarker2 = null;
+        let pressTimer = null;
+        let isUIVisible = true;
+
+        function setLayupPoint(lat, lon) {
+            if (!map) return;
+            layupPoint = { lat, lon };
+            
+            // Create or update layup marker on map
+            if (layupMarker) {
+                layupMarker.setLngLat([lon, lat]);
+            } else {
+                const layupEl = document.createElement('div');
+                layupEl.innerHTML = `
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-500/25 border-2 border-yellow-400 shadow-lg shadow-slate-950/60 animate-pulse">
+                        <div class="w-2.5 h-2.5 bg-yellow-400 rounded-full"></div>
+                    </div>
+                `;
+                layupMarker = new maplibregl.Marker({ element: layupEl })
+                    .setLngLat([lon, lat])
+                    .addTo(map);
+            }
+            
+            const clearSpotBtn = document.getElementById('clearSpotBtn');
+            if (clearSpotBtn) clearSpotBtn.classList.remove('hidden');
+
+            recalculateDistance(false); // Update paths and distances quietly
         }
 
-        // Load custom course JSON coordinates
-        function loadCoordsFromJson() {
-            const textarea = document.getElementById('courseJsonTextarea');
-            if (!textarea) return;
-            try {
-                const parsed = JSON.parse(textarea.value);
-                
-                for (let i = 1; i <= 18; i++) {
-                    if (!parsed[i] || typeof parsed[i].lat !== 'number' || typeof parsed[i].lon !== 'number') {
-                        throw new Error(`Missing Green coordinates for Hole ${i}`);
-                    }
-                    if (typeof parsed[i].teeLat !== 'number') parsed[i].teeLat = parsed[i].lat - 0.0012;
-                    if (typeof parsed[i].teeLon !== 'number') parsed[i].teeLon = parsed[i].lon;
+        function clearLayupPoint() {
+            layupPoint = null;
+            if (layupMarker) {
+                layupMarker.remove();
+                layupMarker = null;
+            }
+            if (midpointMarker1) {
+                midpointMarker1.remove();
+                midpointMarker1 = null;
+            }
+            if (midpointMarker2) {
+                midpointMarker2.remove();
+                midpointMarker2 = null;
+            }
+
+            const clearSpotBtn = document.getElementById('clearSpotBtn');
+            if (clearSpotBtn) clearSpotBtn.classList.add('hidden');
+
+            recalculateDistance(false); // Reset paths quietly
+        }
+
+        function setupLongPressHUDToggle() {
+            const mapEl = document.getElementById('map');
+            if (!mapEl) return;
+
+            mapEl.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('.maplibregl-control-container')) {
+                    return;
                 }
                 
-                courses[activeCourse].holes = parsed;
-                saveCoursesToStorage();
-                renderHolesEditorInputs();
-                recalculateDistance(true);
-                showToast("Coordinates Imported!");
-            } catch(e) {
-                alert(`Import failed: ${e.message}.`);
+                if (pressTimer) clearTimeout(pressTimer);
+                pressTimer = setTimeout(() => {
+                    toggleHUDVisibility();
+                }, 750);
+            });
+
+            const cancelHandler = () => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            };
+
+            mapEl.addEventListener('pointerup', cancelHandler);
+            mapEl.addEventListener('pointermove', cancelHandler);
+            mapEl.addEventListener('pointercancel', cancelHandler);
+        }
+
+        function toggleHUDVisibility() {
+            isUIVisible = !isUIVisible;
+            
+            const header = document.querySelector('header');
+            const bottomCard = document.querySelector('.absolute.bottom-4.left-4.right-4');
+            const refreshGps = document.getElementById('refreshGpsContainer');
+            const topBadges = document.getElementById('topBadges');
+            
+            if (header) {
+                if (isUIVisible) header.classList.remove('hidden');
+                else header.classList.add('hidden');
             }
+            if (bottomCard) {
+                if (isUIVisible) bottomCard.classList.remove('hidden');
+                else bottomCard.classList.add('hidden');
+            }
+            if (refreshGps) {
+                if (isUIVisible) refreshGps.classList.remove('hidden');
+                else refreshGps.classList.add('hidden');
+            }
+            if (topBadges) {
+                if (isUIVisible) topBadges.classList.remove('hidden');
+                else topBadges.classList.add('hidden');
+            }
+            
+            showToast(isUIVisible ? "HUD Restored" : "HUD Hidden (Hold map to restore)");
         }
 
         // 10. Shot History Log rendering
@@ -1540,12 +1640,22 @@
                 }
             });
 
-            navigator.clipboard.writeText(csv).then(() => {
-                showToast("CSV Copied to Clipboard!");
-            }).catch(err => {
+            try {
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                const filename = `${activeCourse.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_round_data.csv`;
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast("CSV Downloaded!");
+            } catch (err) {
                 console.error("Export Error:", err);
                 showToast("Export failed.");
-            });
+            }
         }
 
         // 12. Reset Round Data
@@ -1559,6 +1669,7 @@
                 currentShot = 1;
                 selectLie('Tee');
                 clearManualOverride();
+                clearLayupPoint();
                 
                 updateUI();
                 renderShotLog();
