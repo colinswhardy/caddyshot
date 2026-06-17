@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CaddyShot // Premium Golf Tracker</title>
+    <title>CaddyShot // Premium Golf Satellite Tracker</title>
     
     <!-- Tailwind CSS v3 CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -33,13 +33,17 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Custom CSS for custom scrollbars and animations -->
+    <!-- Leaflet.js Mapping Library CSS & JS -->
+    <link class="leaflet-css" rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Custom CSS -->
     <style>
         body {
             font-family: 'Outfit', sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
-        /* Custom hide scrollbar */
+        /* Hide scrollbars */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -49,20 +53,29 @@
         }
         @keyframes pulse-emerald {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: .5; transform: scale(1.1); }
+            50% { opacity: .5; transform: scale(1.15); }
         }
         .pulse-dot {
             animation: pulse-emerald 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        /* Dark map style adjustment */
+        .leaflet-container {
+            background: #020617;
+        }
+        /* Custom map control icons */
+        .custom-green-icon, .custom-user-icon {
+            background: transparent;
+            border: none;
         }
     </style>
 </head>
 <body class="h-full bg-slate-950 text-slate-100 flex justify-center items-stretch overflow-hidden select-none">
 
-    <!-- Container matching mobile aspect ratio and viewport -->
+    <!-- Mobile Screen Wrapper -->
     <div class="w-full max-w-md bg-slate-900 border-x border-slate-800 flex flex-col h-full relative overflow-hidden shadow-2xl">
         
         <!-- Header -->
-        <header class="bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
+        <header class="bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
             <!-- Hole Selector -->
             <div class="flex items-center gap-2">
                 <button onclick="changeHole(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-90 flex items-center justify-center text-slate-400 transition-all">
@@ -77,96 +90,79 @@
                 </button>
             </div>
 
-            <!-- Logo -->
+            <!-- Logo & Course Name -->
             <div class="flex flex-col items-center">
                 <span class="text-xs font-black tracking-widest text-slate-400">CADDY<span class="text-emerald-500">SHOT</span></span>
-                <span id="holeNameDisplay" class="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">Hole 1 (Par 4)</span>
+                <span id="courseNameDisplay" class="text-[9.5px] text-emerald-400/80 font-bold uppercase tracking-wider max-w-[140px] truncate text-center">Pebble Beach</span>
             </div>
 
-            <!-- Shot Display -->
+            <!-- Shot Display & Settings Trigger -->
             <div class="flex items-center gap-2">
                 <div class="bg-slate-900/90 border border-slate-800 px-3 py-1 rounded-lg flex flex-col items-center min-w-[70px]">
                     <span class="text-[9px] uppercase tracking-wider text-slate-500 font-bold">Shot</span>
                     <span id="currentShotDisplay" class="text-base font-extrabold text-emerald-400">1</span>
                 </div>
-                <div class="flex flex-col gap-1">
-                    <button onclick="adjustShot(1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 active:scale-90 flex items-center justify-center text-slate-400 text-xs transition-all">+</button>
-                    <button onclick="adjustShot(-1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 active:scale-90 flex items-center justify-center text-slate-400 text-xs transition-all">-</button>
-                </div>
+                <button onclick="openCourseModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-90 flex items-center justify-center text-slate-400 transition-all" title="Course Setup">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </button>
             </div>
         </header>
 
+        <!-- Coordinate Capture Mode Banner -->
+        <div id="captureBanner" class="hidden bg-amber-500/10 border-b border-amber-500/25 px-4 py-2 flex items-center justify-between text-xs z-10 animate-pulse">
+            <span class="text-amber-400 font-semibold flex items-center gap-1">
+                <span>🎯</span> Click Map to set Green for Hole <span id="captureHoleNum" class="font-extrabold">1</span>
+            </span>
+            <button onclick="disableCaptureMode()" class="text-slate-400 hover:text-slate-200 underline font-bold">Cancel</button>
+        </div>
+
         <!-- Main Body Scroll Area -->
-        <main class="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-24">
+        <main class="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-32">
             
-            <!-- Pin Location Toggle -->
-            <div class="bg-slate-950/60 p-1.5 rounded-xl border border-slate-800/60 flex items-center justify-between gap-1 shadow-inner">
-                <button onclick="setPinPosition('front')" id="pin-front" class="flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all duration-200 text-slate-400 hover:text-slate-200">
-                    Front
-                </button>
-                <button onclick="setPinPosition('center')" id="pin-center" class="flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all duration-200 text-slate-400 hover:text-slate-200">
-                    Center
-                </button>
-                <button onclick="setPinPosition('back')" id="pin-back" class="flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all duration-200 text-slate-400 hover:text-slate-200">
-                    Back
-                </button>
+            <!-- Map Container -->
+            <div class="relative bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+                <div id="map" class="z-0"></div>
+                <!-- Satellite Imagery Watermark -->
+                <div class="absolute bottom-1 right-2 z-10 pointer-events-none text-[8px] text-white/50 uppercase tracking-widest bg-slate-950/40 px-1 py-0.5 rounded">
+                    Sat Imagery
+                </div>
             </div>
 
             <!-- GPS Yardage and Override Display Card -->
             <div class="relative bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-5 text-center shadow-lg overflow-hidden">
                 <!-- Status Dots -->
-                <div class="absolute top-3 left-4 flex items-center gap-1.5 bg-slate-900/80 px-2 py-0.5 rounded-full border border-slate-800/80">
-                    <span id="gpsStatusDot" class="w-2.5 h-2.5 rounded-full bg-yellow-500 pulse-dot"></span>
+                <div class="absolute top-3 left-4 flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-0.5 rounded-full border border-slate-800/80">
+                    <span id="gpsStatusDot" class="w-2 h-2 rounded-full bg-yellow-500 pulse-dot"></span>
                     <span id="gpsStatusText" class="text-[9px] uppercase font-bold text-slate-400">Acquiring GPS</span>
                 </div>
 
-                <!-- Simulation Alert -->
-                <div id="simulatedIndicator" class="hidden absolute top-3 right-4 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                <!-- Simulation Indicator -->
+                <div id="simulatedIndicator" class="hidden absolute top-3 right-4 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
                     <span class="text-[9px] uppercase font-bold text-amber-400">Simulated</span>
                 </div>
 
                 <!-- Yardage Display -->
-                <div class="mt-4 py-3">
+                <div class="mt-4 py-2">
                     <div class="flex justify-center items-baseline">
                         <span id="distanceDisplay" class="text-7xl font-extrabold tracking-tighter text-slate-100 transition-all duration-150">---</span>
                         <span class="text-2xl font-bold text-emerald-400 ml-1">YDS</span>
                     </div>
-                    <!-- Override Warning / GPS Status Info -->
+                    <!-- Override Status -->
                     <div class="mt-1 flex items-center justify-center gap-2">
-                        <span id="distanceLabel" class="text-xs text-slate-500 uppercase tracking-widest font-semibold">GPS Distance</span>
+                        <span id="distanceLabel" class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">To Green Center</span>
                         <button onclick="clearManualOverride()" id="clearOverrideBtn" class="hidden text-[10px] bg-rose-500/10 border border-rose-500/20 text-rose-400 px-2 py-0.5 rounded hover:bg-rose-500/20 active:scale-95 transition-all">
                             Use GPS
                         </button>
                     </div>
                 </div>
 
-                <!-- Refresh GPS button -->
+                <!-- GPS Info & Refresh -->
                 <div class="border-t border-slate-800/60 pt-3 flex justify-between items-center text-xs">
-                    <span class="text-slate-500 font-medium" id="targetCoordsText">Target: Loading...</span>
+                    <span class="text-slate-500 text-[10px]" id="targetCoordsText">Pin Center: Loading...</span>
                     <button onclick="refreshGPS()" class="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-bold active:scale-95 transition-all">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.228 10H18.228"/></svg>
                         Refresh GPS
                     </button>
-                </div>
-            </div>
-
-            <!-- Manual Override Keypad -->
-            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-3 shadow-md">
-                <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-2">Manual Distance Keypad</div>
-                <div class="grid grid-cols-3 gap-1.5 max-w-[280px] mx-auto">
-                    <!-- Keypad Keys -->
-                    <button onclick="pressKey('1')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">1</button>
-                    <button onclick="pressKey('2')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">2</button>
-                    <button onclick="pressKey('3')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">3</button>
-                    <button onclick="pressKey('4')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">4</button>
-                    <button onclick="pressKey('5')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">5</button>
-                    <button onclick="pressKey('6')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">6</button>
-                    <button onclick="pressKey('7')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">7</button>
-                    <button onclick="pressKey('8')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">8</button>
-                    <button onclick="pressKey('9')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">9</button>
-                    <button onclick="pressKey('C')" class="py-2.5 bg-rose-950/40 hover:bg-rose-950/60 border border-rose-900/30 active:scale-90 rounded-xl font-bold text-base text-rose-400 transition-all">C</button>
-                    <button onclick="pressKey('0')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/60 transition-all">0</button>
-                    <button onclick="pressKey('⌫')" class="py-2.5 bg-slate-950 hover:bg-slate-850 active:scale-90 rounded-xl font-bold text-base text-slate-400 border border-slate-800/60 transition-all">⌫</button>
                 </div>
             </div>
 
@@ -238,11 +234,11 @@
                 </div>
             </div>
 
-            <!-- Dev Simulator Collapsible Console -->
+            <!-- Dev Simulator Console -->
             <div class="bg-slate-950/40 border border-slate-800/80 rounded-xl overflow-hidden transition-all duration-300 shadow">
                 <button onclick="toggleDevConsole()" class="w-full px-4 py-2 flex items-center justify-between text-slate-400 hover:text-slate-300 font-bold text-xs uppercase tracking-wider">
                     <span class="flex items-center gap-1.5">
-                        <span>🛠️</span> Developer Simulator Console
+                        <span>🛠️</span> Dev GPS Simulator
                     </span>
                     <svg id="devArrow" class="w-3.5 h-3.5 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
@@ -251,13 +247,13 @@
                         Real Device GPS
                     </button>
                     <button onclick="setSimulation(250)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
-                        Mock 250 Yds Out
+                        Mock 250 Yds
                     </button>
                     <button onclick="setSimulation(150)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
-                        Mock 150 Yds Out
+                        Mock 150 Yds
                     </button>
                     <button onclick="setSimulation(75)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
-                        Mock 75 Yds Out
+                        Mock 75 Yds
                     </button>
                     <button onclick="setSimulation(15)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
                         Mock 15 Yds (Green)
@@ -265,29 +261,31 @@
                     <button onclick="setSimulation(3)" class="py-1.5 bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded font-semibold hover:bg-amber-500/20 transition-all">
                         Mock 3 Yds (Putt)
                     </button>
-                    <div class="col-span-2 text-[10px] text-slate-500 text-center italic mt-1">
-                        Mock modes calculate distance relative to the chosen hole's green target coordinates.
-                    </div>
                 </div>
             </div>
 
             <!-- Visual Shot History / Collapsible -->
             <div class="bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden transition-all duration-300">
                 <button onclick="toggleLog()" class="w-full px-4 py-3 bg-slate-950/60 flex items-center justify-between text-slate-300 hover:text-slate-100 font-bold text-xs uppercase tracking-wider">
-                    <span>📋 Current Round Shot Log (<span id="logCount">0</span>)</span>
+                    <span>📋 Shot Log (<span id="logCount">0</span>)</span>
                     <svg id="logArrow" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <div id="shotLogContainer" class="hidden border-t border-slate-800 max-h-[160px] overflow-y-auto divide-y divide-slate-850 no-scrollbar">
-                    <!-- Log entries populated here -->
-                    <div id="emptyLogText" class="p-4 text-center text-xs text-slate-500 italic">No shots logged yet. Take your first shot!</div>
+                    <div id="emptyLogText" class="p-4 text-center text-xs text-slate-500 italic">No shots logged yet.</div>
                 </div>
             </div>
 
         </main>
 
         <!-- Bottom Action Bar (Fixed at bottom of mobile viewport) -->
-        <footer class="absolute bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-slate-800/80 p-4 z-10 space-y-2">
+        <footer class="absolute bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/85 p-4 z-10 space-y-2">
             
+            <!-- Manual Distance Keypad Trigger Button -->
+            <button onclick="openKeypadModal()" class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-center text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                Manual Distance Keypad (yards)
+            </button>
+
             <!-- Main ENTER SHOT Button -->
             <button onclick="submitShot()" id="enterShotBtn" class="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-bold py-3.5 rounded-xl text-center text-sm uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all">
                 Enter Shot
@@ -295,84 +293,417 @@
 
             <!-- Secondary Actions Row -->
             <div class="flex gap-2">
-                <button onclick="copyCSVExport()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-300 border border-slate-800 font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                <button onclick="copyCSVExport()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-300 border border-slate-800 font-bold py-1.5 rounded-lg text-[9.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-1">
                     Export CSV
                 </button>
-                <button onclick="confirmReset()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-rose-400 border border-slate-800 font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-16v1a3 3 0 003 3h10M9 3h6m2 5V4a1 1 0 00-1-1H7a1 1 0 00-1 1v4"/></svg>
+                <button onclick="confirmReset()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-rose-400 border border-slate-800 font-bold py-1.5 rounded-lg text-[9.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-1">
                     Reset Round
                 </button>
             </div>
         </footer>
 
-        <!-- Alert overlay for clipboard copy and alerts -->
-        <div id="toastAlert" class="pointer-events-none opacity-0 transform translate-y-3 transition-all duration-300 absolute bottom-24 left-1/2 -translate-x-1/2 z-50 bg-emerald-600/90 text-white font-semibold text-xs py-2 px-4 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5">
+        <!-- Toast Notification Alert -->
+        <div id="toastAlert" class="pointer-events-none opacity-0 transform translate-y-3 transition-all duration-300 absolute bottom-28 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/90 text-white font-semibold text-xs py-2 px-4 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-            <span id="toastMessage">Copied to Clipboard!</span>
+            <span id="toastMessage">Copied!</span>
         </div>
 
     </div>
 
+    <!-- ============================================== -->
+    <!-- MODAL POPUPS (Set to z-[9999] above Leaflet map) -->
+    <!-- ============================================== -->
+
+    <!-- 1. MANUAL KEYPAD OVERRIDE MODAL -->
+    <div id="keypadModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-[300px] shadow-2xl flex flex-col items-stretch">
+            
+            <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-1">Manual Distance Override</div>
+            
+            <!-- Keypad Display Screen -->
+            <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3 text-center my-3">
+                <div class="flex justify-center items-baseline">
+                    <span id="modalKeypadValue" class="text-4xl font-extrabold text-emerald-400">---</span>
+                    <span class="text-base font-bold text-slate-400 ml-1">YDS</span>
+                </div>
+            </div>
+
+            <!-- Keyboard Layout -->
+            <div class="grid grid-cols-3 gap-1.5 mb-4">
+                <button onclick="pressModalKey('1')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">1</button>
+                <button onclick="pressModalKey('2')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">2</button>
+                <button onclick="pressModalKey('3')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">3</button>
+                <button onclick="pressModalKey('4')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">4</button>
+                <button onclick="pressModalKey('5')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">5</button>
+                <button onclick="pressModalKey('6')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">6</button>
+                <button onclick="pressModalKey('7')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">7</button>
+                <button onclick="pressModalKey('8')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">8</button>
+                <button onclick="pressModalKey('9')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">9</button>
+                <button onclick="pressModalKey('C')" class="py-2.5 bg-rose-950/40 border border-rose-900/30 active:scale-90 rounded-xl font-bold text-slate-400">C</button>
+                <button onclick="pressModalKey('0')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-lg text-slate-200 border border-slate-800/50">0</button>
+                <button onclick="pressModalKey('⌫')" class="py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-90 rounded-xl font-bold text-slate-400 border border-slate-800/50">⌫</button>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="flex gap-2">
+                <button onclick="closeKeypadModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-300">
+                    Cancel
+                </button>
+                <button onclick="applyKeypadOverride()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-950">
+                    Apply
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 2. COURSE SETUP & COORDINATES MODAL -->
+    <div id="courseModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-lg h-[90vh] flex flex-col justify-between shadow-2xl">
+            
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-black text-slate-200 uppercase tracking-widest">Course Setup & Coordinates</h3>
+                <button onclick="closeCourseModal()" class="text-slate-500 hover:text-slate-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Scrollable Settings Content -->
+            <div class="flex-1 overflow-y-auto my-3 pr-1 space-y-4 no-scrollbar">
+                
+                <!-- Course Selector / Add New -->
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Select Active Course</label>
+                        <button onclick="deleteCurrentCourse()" id="btnDeleteCourse" class="text-[9px] text-rose-400 hover:underline">Delete Course</button>
+                    </div>
+                    <select id="courseSelect" onchange="onCourseSelectChange()" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-xs text-slate-200 font-bold focus:outline-none focus:border-emerald-500">
+                        <!-- Populated by JavaScript -->
+                    </select>
+
+                    <div class="border-t border-slate-800/40 my-2 pt-2">
+                        <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1">Create New Course</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="newCourseName" placeholder="Course Name (e.g. Oakmont CC)" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg py-1.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <button onclick="createNewCourse()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition-all active:scale-95">
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Capture Help Info Box -->
+                <div class="bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl text-[11px] text-emerald-400/80 leading-relaxed">
+                    <span class="font-extrabold uppercase text-[10px] text-emerald-400 block mb-0.5">💡 Pro-Tip: Fast Map Setup</span>
+                    Click the <span class="bg-slate-950 px-1 py-0.5 rounded text-amber-400 font-bold">🎯 Map</span> button on any hole row below, close the settings, and click on the satellite map where the green center is. It will capture the exact coordinates instantly!
+                </div>
+
+                <!-- 18 Hole Rows Input Editor -->
+                <div class="space-y-2">
+                    <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Hole Green Coordinates</div>
+                    
+                    <div class="bg-slate-950/40 rounded-xl border border-slate-800 divide-y divide-slate-850 overflow-hidden">
+                        <div class="grid grid-cols-12 gap-1 px-3 py-2 text-[9px] text-slate-500 font-bold uppercase text-center bg-slate-950/60 border-b border-slate-800">
+                            <div class="col-span-2 text-left">Hole</div>
+                            <div class="col-span-4">Latitude</div>
+                            <div class="col-span-4">Longitude</div>
+                            <div class="col-span-2">Quick</div>
+                        </div>
+                        <div id="holesInputsContainer" class="divide-y divide-slate-800 max-h-[300px] overflow-y-auto no-scrollbar">
+                            <!-- JS generates 18 hole rows -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backup Import / Export JSON -->
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Import / Export (JSON Block)</label>
+                    <textarea id="courseJsonTextarea" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-[10px] font-mono text-slate-400 focus:outline-none focus:border-emerald-500" placeholder='Pasted Course JSON Coordinates here...'></textarea>
+                    <div class="flex gap-2">
+                        <button onclick="loadCoordsFromJson()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded-lg text-[10px] font-bold text-slate-300">
+                            Import JSON
+                        </button>
+                        <button onclick="exportCoordsToJson()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded-lg text-[10px] font-bold text-slate-300">
+                            Generate JSON
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="border-t border-slate-800 pt-3 flex gap-2">
+                <button onclick="closeCourseModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-300">
+                    Cancel & Close
+                </button>
+                <button onclick="saveCourseSettings()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-950">
+                    Save Coordinates
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <!-- JavaScript Application Logic -->
     <script>
-        // HOLE DATABASE (Pebble Beach Golf Links simulated positions)
-        const HOLE_DATABASE = {
-            1: {
-                name: "Hole 1 (Par 4)",
-                front: { lat: 36.568400, lon: -121.948300 },
-                center: { lat: 36.568600, lon: -121.948200 },
-                back: { lat: 36.568800, lon: -121.948100 }
-            },
-            2: {
-                name: "Hole 2 (Par 5)",
-                front: { lat: 36.570300, lon: -121.951700 },
-                center: { lat: 36.570500, lon: -121.951500 },
-                back: { lat: 36.570700, lon: -121.951300 }
-            },
-            3: {
-                name: "Hole 3 (Par 3)",
-                front: { lat: 36.569300, lon: -121.953700 },
-                center: { lat: 36.569500, lon: -121.953500 },
-                back: { lat: 36.569700, lon: -121.953300 }
+        // DEFAULT 18-HOLE DEMO DATABASE (Pebble Beach Golf Links green positions)
+        const DEFAULT_COURSES = {
+            "Pebble Beach": {
+                name: "Pebble Beach Golf Links",
+                holes: {
+                    1: { name: "Hole 1", lat: 36.568600, lon: -121.948200 },
+                    2: { name: "Hole 2", lat: 36.570500, lon: -121.951500 },
+                    3: { name: "Hole 3", lat: 36.569500, lon: -121.953500 },
+                    4: { name: "Hole 4", lat: 36.568100, lon: -121.956500 },
+                    5: { name: "Hole 5", lat: 36.568000, lon: -121.958500 },
+                    6: { name: "Hole 6", lat: 36.566500, lon: -121.959500 },
+                    7: { name: "Hole 7", lat: 36.564500, lon: -121.959800 },
+                    8: { name: "Hole 8", lat: 36.564100, lon: -121.956000 },
+                    9: { name: "Hole 9", lat: 36.563000, lon: -121.951000 },
+                    10: { name: "Hole 10", lat: 36.561500, lon: -121.947000 },
+                    11: { name: "Hole 11", lat: 36.563500, lon: -121.944000 },
+                    12: { name: "Hole 12", lat: 36.565200, lon: -121.944200 },
+                    13: { name: "Hole 13", lat: 36.567000, lon: -121.944800 },
+                    14: { name: "Hole 14", lat: 36.569500, lon: -121.943000 },
+                    15: { name: "Hole 15", lat: 36.571000, lon: -121.944000 },
+                    16: { name: "Hole 16", lat: 36.570800, lon: -121.947000 },
+                    17: { name: "Hole 17", lat: 36.569500, lon: -121.949000 },
+                    18: { name: "Hole 18", lat: 36.568300, lon: -121.951000 }
+                }
             }
         };
 
         // Application State
+        let courses = {};
+        let activeCourse = "Pebble Beach";
         let currentHole = 1;
         let currentShot = 1;
-        let selectedPin = 'center'; // default center
-        let selectedLie = 'Tee'; // default lie
-        let manualOverrideValue = ''; // keypad typed input
-        let isManualMode = false;
-        
-        let simulatedDistanceYards = null; // Mock mode
-        let watchId = null;
-        let userLocation = null;
+        let selectedLie = 'Tee';
 
-        // Initialize state on load
+        // Manual override state
+        let manualOverrideValue = '';
+        let isManualMode = false;
+        let tempModalKeypadValue = ''; // keypad buffer in modal
+
+        // GPS state
+        let userLocation = null;
+        let simulatedDistanceYards = null;
+        let watchId = null;
+
+        // Map instances
+        let map = null;
+        let userMarker = null;
+        let greenMarker = null;
+        let distanceLine = null;
+
+        // Capture Mode coordinates setup state
+        let isCaptureMode = false;
+        let captureHoleNum = 1;
+
+        // Load application data on start
         window.addEventListener('DOMContentLoaded', () => {
+            loadCoursesFromStorage();
             loadRoundState();
-            setPinPosition('center');
-            selectLie('Tee');
+            initLeafletMap();
             setupGeolocation();
+            selectLie('Tee');
             renderShotLog();
         });
 
-        // 1. Hole & Shot Management
+        // 1. Initialise Leaflet satellite map
+        function initLeafletMap() {
+            const defaultHole = getActiveHoleCoords();
+
+            map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([defaultHole.lat, defaultHole.lon], 18);
+
+            // Load ESRI Satellite Map Tiles (high quality, free usage, no credentials required)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19
+            }).addTo(map);
+
+            // Custom green flag icon
+            const greenIcon = L.divIcon({
+                className: 'custom-green-icon',
+                html: `
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/25 border-2 border-emerald-400 shadow-lg shadow-slate-950/60">
+                        <svg class="w-4.5 h-4.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                            <line x1="12" y1="2" x2="12" y2="22" />
+                            <path d="M12 4l9 4-9 4" fill="currentColor" fill-opacity="0.2"/>
+                        </svg>
+                    </div>
+                `,
+                iconSize: [32, 32],
+                iconAnchor: [12, 22]
+            });
+
+            // Custom user blue locator dot icon
+            const userIcon = L.divIcon({
+                className: 'custom-user-icon',
+                html: `
+                    <div class="relative w-6 h-6 flex items-center justify-center">
+                        <div class="absolute w-5 h-5 bg-blue-500 rounded-full opacity-40 animate-ping"></div>
+                        <div class="w-3.5 h-3.5 bg-blue-400 border-2 border-white rounded-full shadow-lg shadow-slate-950/80"></div>
+                    </div>
+                `,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+
+            // Green Pin marker
+            greenMarker = L.marker([defaultHole.lat, defaultHole.lon], { icon: greenIcon }).addTo(map);
+
+            // User locator marker (offset initially to show the line)
+            userMarker = L.marker([defaultHole.lat + 0.0012, defaultHole.lon], { icon: userIcon }).addTo(map);
+
+            // Dashed connection line
+            distanceLine = L.polyline([userMarker.getLatLng(), greenMarker.getLatLng()], {
+                color: '#34d399',
+                dashArray: '4, 8',
+                weight: 2
+            }).addTo(map);
+
+            // Map click handler (active in capture mode)
+            map.on('click', (e) => {
+                if (isCaptureMode) {
+                    captureCoordinateFromMap(e.latlng.lat, e.latlng.lng);
+                }
+            });
+        }
+
+        // 2. Geolocation tracking
+        function setupGeolocation() {
+            const statusDot = document.getElementById('gpsStatusDot');
+            const statusText = document.getElementById('gpsStatusText');
+
+            if (!navigator.geolocation) {
+                statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
+                statusText.innerText = "GPS Not Supported";
+                return;
+            }
+
+            statusDot.className = "w-2 h-2 rounded-full bg-yellow-500 pulse-dot";
+            statusText.innerText = "Locating...";
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    // Update location unless simulated distance is active
+                    if (simulatedDistanceYards === null) {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        };
+                        statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 pulse-dot";
+                        statusText.innerText = "GPS Active";
+                        recalculateDistance();
+                    }
+                },
+                (error) => {
+                    console.warn("GPS Warning:", error.message);
+                    if (simulatedDistanceYards === null) {
+                        statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
+                        statusText.innerText = "No GPS Signal";
+                        document.getElementById('distanceDisplay').innerText = "---";
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 8000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function refreshGPS() {
+            setupGeolocation();
+            showToast("GPS Location Refreshed");
+        }
+
+        // Haversine geodesic yardage math
+        function calculateDistanceYards(lat1, lon1, lat2, lon2) {
+            const R_earth_m = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return Math.round((R_earth_m * c) * 1.09361);
+        }
+
+        // 3. Map View Updates & Math Core
+        function recalculateDistance() {
+            const target = getActiveHoleCoords();
+            document.getElementById('targetCoordsText').innerText = `Green Lat: ${target.lat.toFixed(6)}, Lon: ${target.lon.toFixed(6)}`;
+
+            // If manual override is active, skip updates to screen display distance (but map line updates)
+            if (isManualMode) {
+                document.getElementById('distanceDisplay').innerText = manualOverrideValue;
+            }
+
+            // Simulate mock position if active
+            if (simulatedDistanceYards !== null) {
+                const degreeOffset = simulatedDistanceYards / 121390;
+                userLocation = {
+                    lat: target.lat + degreeOffset,
+                    lon: target.lon
+                };
+            }
+
+            if (userLocation && map) {
+                const dist = calculateDistanceYards(
+                    userLocation.lat, userLocation.lon,
+                    target.lat, target.lon
+                );
+
+                if (!isManualMode) {
+                    document.getElementById('distanceDisplay').innerText = dist;
+                }
+
+                // Update Map positions & polyline
+                const userLatLng = L.latLng(userLocation.lat, userLocation.lon);
+                const greenLatLng = L.latLng(target.lat, target.lon);
+
+                userMarker.setLatLng(userLatLng);
+                greenMarker.setLatLng(greenLatLng);
+                distanceLine.setLatLngs([userLatLng, greenLatLng]);
+
+                // Fit map screen dynamically
+                if (dist < 1000) {
+                    const bounds = L.latLngBounds([userLatLng, greenLatLng]);
+                    map.fitBounds(bounds, { padding: [35, 35] });
+                } else {
+                    map.setView(greenLatLng, 18);
+                }
+            } else {
+                if (!isManualMode) {
+                    document.getElementById('distanceDisplay').innerText = "---";
+                }
+                if (map) {
+                    const greenLatLng = L.latLng(target.lat, target.lon);
+                    greenMarker.setLatLng(greenLatLng);
+                    map.setView(greenLatLng, 18);
+                }
+            }
+        }
+
+        // 4. Hole & Course Navigation
         function changeHole(delta) {
             let nextHole = currentHole + delta;
-            if (nextHole < 1) nextHole = 3; // Loop holes
-            if (nextHole > 3) nextHole = 1;
+            if (nextHole < 1) nextHole = 18;
+            if (nextHole > 18) nextHole = 1;
+            
             currentHole = nextHole;
             
-            // Get last shot number for this hole from localStorage, or default to 1
+            // Suggest shot counts and lies based on round status
             const shots = getShotsFromStorage();
-            const holeShots = shots.filter(s => s.hole === currentHole);
+            const holeShots = shots.filter(s => s.hole === currentHole && s.course === activeCourse);
             currentShot = holeShots.length > 0 ? Math.max(...holeShots.map(s => s.shot)) + 1 : 1;
-            
-            // Default lie suggestions:
-            // Shot 1 on any hole is 'Tee', otherwise suggest 'Fairway' or 'Green' depending on shot index
+
             if (currentShot === 1) {
                 selectLie('Tee');
             } else if (currentShot >= 4) {
@@ -381,130 +712,25 @@
                 selectLie('Fairway');
             }
 
+            // If in coordinate click capture mode, keep the capture target in sync
+            if (isCaptureMode) {
+                setCaptureHole(currentHole);
+            }
+
             clearManualOverride();
             updateUI();
             recalculateDistance();
         }
 
-        function adjustShot(delta) {
-            let nextShot = currentShot + delta;
-            if (nextShot < 1) nextShot = 1;
-            currentShot = nextShot;
-            updateUI();
-        }
-
-        // 2. Pin Position Toggle
-        function setPinPosition(position) {
-            selectedPin = position;
-            
-            // Update Toggle Button styles
-            ['front', 'center', 'back'].forEach(p => {
-                const btn = document.getElementById(`pin-${p}`);
-                if (p === position) {
-                    btn.className = "flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider bg-emerald-500 text-slate-950 shadow-md transform scale-[1.02] transition-all";
-                } else {
-                    btn.className = "flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-all bg-slate-900/40";
-                }
-            });
-
-            recalculateDistance();
-        }
-
-        // 3. Geolocation & Haversine Distance Logic
-        function setupGeolocation() {
-            const statusDot = document.getElementById('gpsStatusDot');
-            const statusText = document.getElementById('gpsStatusText');
-
-            if (!navigator.geolocation) {
-                statusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
-                statusText.innerText = "GPS Not Supported";
-                return;
+        function getActiveHoleCoords() {
+            const courseData = courses[activeCourse];
+            if (courseData && courseData.holes[currentHole]) {
+                return courseData.holes[currentHole];
             }
-
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-500 pulse-dot";
-            statusText.innerText = "Locating...";
-
-            // Watch user position to get updates
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    userLocation = {
-                        lat: position.coords.latitude,
-                        lon: position.coords.longitude
-                    };
-                    
-                    statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot";
-                    statusText.innerText = "GPS Active";
-                    
-                    recalculateDistance();
-                },
-                (error) => {
-                    console.error("GPS Error:", error);
-                    // If we are simulating, we ignore error
-                    if (simulatedDistanceYards === null) {
-                        statusDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
-                        statusText.innerText = "GPS Offline";
-                        document.getElementById('distanceDisplay').innerText = "---";
-                    }
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
-            );
+            return { lat: 36.568600, lon: -121.948200 }; // fallback
         }
 
-        function refreshGPS() {
-            setupGeolocation();
-            showToast("GPS Connection Refreshed");
-        }
-
-        // Haversine formula to compute distance in yards
-        function calculateDistanceYards(lat1, lon1, lat2, lon2) {
-            const R_earth_m = 6371000; // Earth radius in meters
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = 
-                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const distanceMeters = R_earth_m * c;
-            return Math.round(distanceMeters * 1.09361); // yards conversion
-        }
-
-        function recalculateDistance() {
-            const target = HOLE_DATABASE[currentHole][selectedPin];
-            document.getElementById('targetCoordsText').innerText = `Pin: ${target.lat.toFixed(6)}, ${target.lon.toFixed(6)}`;
-
-            if (isManualMode) {
-                // Keep manual display active
-                document.getElementById('distanceDisplay').innerText = manualOverrideValue;
-                return;
-            }
-
-            if (simulatedDistanceYards !== null) {
-                // Simulator active: compute mock coordinates matching that distance
-                // 1 yard in lat is roughly 1 / 121390 degrees.
-                const yardOffset = simulatedDistanceYards / 121390;
-                userLocation = {
-                    lat: target.lat + yardOffset,
-                    lon: target.lon
-                };
-            }
-
-            if (userLocation) {
-                const dist = calculateDistanceYards(
-                    userLocation.lat, userLocation.lon,
-                    target.lat, target.lon
-                );
-                document.getElementById('distanceDisplay').innerText = dist;
-            } else {
-                document.getElementById('distanceDisplay').innerText = "---";
-            }
-        }
-
-        // 4. Developer Simulator Mode
+        // 5. GPS Simulation Toggles
         function setSimulation(yards) {
             simulatedDistanceYards = yards;
             const simIndicator = document.getElementById('simulatedIndicator');
@@ -513,52 +739,70 @@
 
             if (yards !== null) {
                 simIndicator.classList.remove('hidden');
-                statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 pulse-dot";
+                statusDot.className = "w-2 h-2 rounded-full bg-amber-500 pulse-dot";
                 statusText.innerText = `Sim: ${yards} Yds`;
                 showToast(`Simulator Set to ${yards} Yards`);
             } else {
                 simIndicator.classList.add('hidden');
-                statusDot.className = userLocation ? "w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot" : "w-2.5 h-2.5 rounded-full bg-yellow-500 pulse-dot";
+                statusDot.className = userLocation ? "w-2 h-2 rounded-full bg-emerald-500 pulse-dot" : "w-2 h-2 rounded-full bg-yellow-500 pulse-dot";
                 statusText.innerText = userLocation ? "GPS Active" : "Acquiring GPS";
-                showToast("Real Device GPS Active");
+                showToast("Real GPS Restored");
             }
             recalculateDistance();
         }
 
-        // 5. Numeric Keypad Override Logic
-        function pressKey(key) {
-            isManualMode = true;
-            document.getElementById('distanceLabel').innerText = "Manual Override";
-            document.getElementById('clearOverrideBtn').classList.remove('hidden');
+        // 6. Modal Numeric Keypad Override
+        function openKeypadModal() {
+            // Populate value from current manual override value or blank
+            tempModalKeypadValue = isManualMode ? manualOverrideValue : '';
+            updateModalKeypadDisplay();
+            document.getElementById('keypadModal').classList.remove('hidden');
+        }
 
+        function closeKeypadModal() {
+            document.getElementById('keypadModal').classList.add('hidden');
+        }
+
+        function pressModalKey(key) {
             if (key === 'C') {
-                manualOverrideValue = '';
+                tempModalKeypadValue = '';
             } else if (key === '⌫') {
-                manualOverrideValue = manualOverrideValue.slice(0, -1);
+                tempModalKeypadValue = tempModalKeypadValue.slice(0, -1);
             } else {
-                // Max length 3 digits (max yards usually 999)
-                if (manualOverrideValue.length < 3) {
-                    manualOverrideValue += key;
+                if (tempModalKeypadValue.length < 3) {
+                    tempModalKeypadValue += key;
                 }
             }
+            updateModalKeypadDisplay();
+        }
 
-            // If empty, default visual text
-            if (manualOverrideValue === '') {
-                document.getElementById('distanceDisplay').innerText = '0';
+        function updateModalKeypadDisplay() {
+            const display = document.getElementById('modalKeypadValue');
+            display.innerText = tempModalKeypadValue === '' ? '---' : tempModalKeypadValue;
+        }
+
+        function applyKeypadOverride() {
+            if (tempModalKeypadValue === '') {
+                clearManualOverride();
             } else {
-                document.getElementById('distanceDisplay').innerText = manualOverrideValue;
+                isManualMode = true;
+                manualOverrideValue = tempModalKeypadValue;
+                document.getElementById('distanceLabel').innerText = "Manual Override";
+                document.getElementById('clearOverrideBtn').classList.remove('hidden');
+                recalculateDistance();
             }
+            closeKeypadModal();
         }
 
         function clearManualOverride() {
             isManualMode = false;
             manualOverrideValue = '';
-            document.getElementById('distanceLabel').innerText = "GPS Distance";
+            document.getElementById('distanceLabel').innerText = "To Green Center";
             document.getElementById('clearOverrideBtn').classList.add('hidden');
             recalculateDistance();
         }
 
-        // 6. Lie Selection
+        // 7. Lie selections
         function selectLie(lie) {
             selectedLie = lie;
             const lies = ['Tee', 'Fairway', 'Rough', 'Sand', 'Green', 'Penalty'];
@@ -582,7 +826,7 @@
             });
         }
 
-        // 7. Action Flow - Save & LocalStorage
+        // 8. Action Flow: Logging Shots
         function submitShot() {
             const displayVal = document.getElementById('distanceDisplay').innerText;
             if (displayVal === '---' || displayVal === '') {
@@ -591,45 +835,45 @@
             }
 
             const dist = parseInt(displayVal, 10);
+            const targetCoords = getActiveHoleCoords();
             
             const newShot = {
                 id: Date.now(),
+                course: activeCourse,
                 hole: currentHole,
                 shot: currentShot,
                 lie: selectedLie,
                 distance: dist,
-                pin: selectedPin,
                 isOverride: isManualMode,
+                greenLat: targetCoords.lat,
+                greenLon: targetCoords.lon,
                 timestamp: new Date().toISOString()
             };
 
-            // Save to localStorage
             const shots = getShotsFromStorage();
             
-            // Check if this Hole/Shot combination already exists to prevent duplicate indexes
-            const duplicateIndex = shots.findIndex(s => s.hole === currentHole && s.shot === currentShot);
+            // Avoid duplicate indexing by overwriting if Hole/Shot already exists
+            const duplicateIndex = shots.findIndex(s => s.course === activeCourse && s.hole === currentHole && s.shot === currentShot);
             if (duplicateIndex !== -1) {
-                shots[duplicateIndex] = newShot; // update
+                shots[duplicateIndex] = newShot;
             } else {
-                shots.push(newShot); // insert
+                shots.push(newShot);
             }
 
             saveShotsToStorage(shots);
             renderShotLog();
 
-            showToast(`Hole ${currentHole} Shot ${currentShot} Logged!`);
+            showToast(`Logged Hole ${currentHole} Shot ${currentShot}!`);
 
-            // Auto advance shot index
+            // Advance shot number
             currentShot += 1;
             
             // Smart auto-lie logic:
-            // If previous was Green, default green. If previous was Tee, default Fairway.
             if (selectedLie === 'Green') {
                 selectLie('Green');
             } else if (selectedLie === 'Tee') {
                 selectLie('Fairway');
             } else {
-                // Keep the current lie or suggest based on progress
                 selectLie(selectedLie);
             }
 
@@ -637,58 +881,290 @@
             updateUI();
         }
 
-        // Helper storage get/set
-        function getShotsFromStorage() {
-            const raw = localStorage.getItem('caddyshot_round');
-            return raw ? JSON.parse(raw) : [];
-        }
-
-        function saveShotsToStorage(shots) {
-            localStorage.setItem('caddyshot_round', JSON.stringify(shots));
-        }
-
-        function loadRoundState() {
-            const shots = getShotsFromStorage();
-            if (shots.length > 0) {
-                // Resume from highest logged hole
-                const highestHole = Math.max(...shots.map(s => s.hole));
-                currentHole = highestHole;
-                // Resume from next shot index on that hole
-                const holeShots = shots.filter(s => s.hole === currentHole);
-                currentShot = Math.max(...holeShots.map(s => s.shot)) + 1;
+        // 9. Course Setup & Database Manager
+        function loadCoursesFromStorage() {
+            const raw = localStorage.getItem('caddyshot_courses');
+            if (raw) {
+                courses = JSON.parse(raw);
             } else {
+                // Initialize default Pebble Beach
+                courses = JSON.parse(JSON.stringify(DEFAULT_COURSES));
+                localStorage.setItem('caddyshot_courses', JSON.stringify(courses));
+            }
+            
+            // Load selected active course name
+            const savedActive = localStorage.getItem('caddyshot_active_course');
+            if (savedActive && courses[savedActive]) {
+                activeCourse = savedActive;
+            } else {
+                activeCourse = Object.keys(courses)[0] || "Pebble Beach";
+                localStorage.setItem('caddyshot_active_course', activeCourse);
+            }
+        }
+
+        function saveCoursesToStorage() {
+            localStorage.setItem('caddyshot_courses', JSON.stringify(courses));
+            localStorage.setItem('caddyshot_active_course', activeCourse);
+        }
+
+        function openCourseModal() {
+            populateCourseSelectDropdown();
+            renderHolesEditorInputs();
+            exportCoordsToJson(); // pre-fill the export textbox
+            document.getElementById('courseModal').classList.remove('hidden');
+        }
+
+        function closeCourseModal() {
+            document.getElementById('courseModal').classList.add('hidden');
+        }
+
+        function populateCourseSelectDropdown() {
+            const select = document.getElementById('courseSelect');
+            select.innerHTML = Object.keys(courses).map(key => `
+                <option value="${key}" ${key === activeCourse ? 'selected' : ''}>${courses[key].name}</option>
+            `).join('');
+        }
+
+        function onCourseSelectChange() {
+            const select = document.getElementById('courseSelect');
+            activeCourse = select.value;
+            localStorage.setItem('caddyshot_active_course', activeCourse);
+            
+            // Refresh editor rows and JSON export textarea
+            renderHolesEditorInputs();
+            exportCoordsToJson();
+            
+            // Reset state
+            currentHole = 1;
+            currentShot = 1;
+            updateUI();
+            recalculateDistance();
+        }
+
+        function createNewCourse() {
+            const input = document.getElementById('newCourseName');
+            const name = input.value.trim();
+            if (!name) {
+                showToast("Please enter a course name");
+                return;
+            }
+
+            if (courses[name]) {
+                showToast("Course already exists");
+                return;
+            }
+
+            // Seed new course with Hole 1 Pebble Beach coordinates as defaults
+            const newHoles = {};
+            for (let i = 1; i <= 18; i++) {
+                newHoles[i] = {
+                    name: `Hole ${i}`,
+                    lat: 36.568600,
+                    lon: -121.948200
+                };
+            }
+
+            courses[name] = {
+                name: name,
+                holes: newHoles
+            };
+
+            activeCourse = name;
+            saveCoursesToStorage();
+            input.value = '';
+            
+            // Refresh dropdown/rows
+            populateCourseSelectDropdown();
+            renderHolesEditorInputs();
+            exportCoordsToJson();
+            
+            showToast(`Created Course: ${name}`);
+            
+            currentHole = 1;
+            currentShot = 1;
+            updateUI();
+            recalculateDistance();
+        }
+
+        function deleteCurrentCourse() {
+            const courseKeys = Object.keys(courses);
+            if (courseKeys.length <= 1) {
+                alert("Cannot delete the only course in your database.");
+                return;
+            }
+
+            if (confirm(`Are you sure you want to delete ${activeCourse}? This will clear all its coordinates.`)) {
+                delete courses[activeCourse];
+                activeCourse = Object.keys(courses)[0];
+                saveCoursesToStorage();
+                
+                populateCourseSelectDropdown();
+                renderHolesEditorInputs();
+                exportCoordsToJson();
+                
+                showToast("Course deleted");
                 currentHole = 1;
                 currentShot = 1;
+                updateUI();
+                recalculateDistance();
             }
-            updateUI();
         }
 
-        // 8. Render Shot Log List
+        function renderHolesEditorInputs() {
+            const container = document.getElementById('holesInputsContainer');
+            const holes = courses[activeCourse].holes;
+
+            let html = '';
+            for (let i = 1; i <= 18; i++) {
+                const h = holes[i] || { lat: 36.568600, lon: -121.948200 };
+                html += `
+                    <div class="grid grid-cols-12 gap-1 px-2 py-1.5 items-center text-xs">
+                        <div class="col-span-2 font-bold text-slate-300">#${i}</div>
+                        <div class="col-span-4">
+                            <input type="number" step="any" id="lat-input-${i}" value="${h.lat.toFixed(6)}" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[11px] text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="col-span-4">
+                            <input type="number" step="any" id="lon-input-${i}" value="${h.lon.toFixed(6)}" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[11px] text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="col-span-2 flex gap-1 justify-center">
+                            <button onclick="useCurrentCoordsForHole(${i})" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 p-1 rounded transition-all" title="Use Current GPS Coordinates">📍</button>
+                            <button onclick="enableCaptureMode(${i})" class="bg-slate-800 hover:bg-slate-700 text-amber-400 p-1 rounded transition-all" title="Pick Coordinates on satellite Map">🎯</button>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function useCurrentCoordsForHole(holeNum) {
+            if (!userLocation) {
+                alert("GPS coordinates not acquired yet. Please wait for a signal or use simulator.");
+                return;
+            }
+            document.getElementById(`lat-input-${holeNum}`).value = userLocation.lat.toFixed(6);
+            document.getElementById(`lon-input-${holeNum}`).value = userLocation.lon.toFixed(6);
+            showToast(`Hole ${holeNum} set to current coordinates!`);
+        }
+
+        // Fast Coordinate Mapping Capture Workflow
+        function enableCaptureMode(holeNum) {
+            isCaptureMode = true;
+            captureHoleNum = holeNum;
+            
+            // Sync active hole to coordinate being edited
+            currentHole = holeNum;
+            updateUI();
+            recalculateDistance();
+
+            document.getElementById('captureHoleNum').innerText = holeNum;
+            document.getElementById('captureBanner').classList.remove('hidden');
+            
+            closeCourseModal();
+            showToast(`Capture Mode: Click map for Hole ${holeNum}`);
+        }
+
+        function disableCaptureMode() {
+            isCaptureMode = false;
+            document.getElementById('captureBanner').classList.add('hidden');
+        }
+
+        function captureCoordinateFromMap(lat, lon) {
+            if (!isCaptureMode) return;
+            
+            // Update local memory coordinates
+            courses[activeCourse].holes[captureHoleNum].lat = lat;
+            courses[activeCourse].holes[captureHoleNum].lon = lon;
+            saveCoursesToStorage();
+            
+            showToast(`Saved Hole ${captureHoleNum} to Clicked Spot!`);
+            
+            // Advance to next hole automatically to make setting up complete courses fast
+            if (captureHoleNum < 18) {
+                captureHoleNum += 1;
+                currentHole = captureHoleNum;
+                document.getElementById('captureHoleNum').innerText = captureHoleNum;
+                updateUI();
+                recalculateDistance();
+            } else {
+                disableCaptureMode();
+                showToast("All 18 holes captured!");
+            }
+            recalculateDistance();
+        }
+
+        function saveCourseSettings() {
+            // Parse inputs
+            for (let i = 1; i <= 18; i++) {
+                const latVal = parseFloat(document.getElementById(`lat-input-${i}`).value);
+                const lonVal = parseFloat(document.getElementById(`lon-input-${i}`).value);
+                
+                if (!isNaN(latVal) && !isNaN(lonVal)) {
+                    courses[activeCourse].holes[i].lat = latVal;
+                    courses[activeCourse].holes[i].lon = lonVal;
+                }
+            }
+
+            saveCoursesToStorage();
+            recalculateDistance();
+            closeCourseModal();
+            showToast("Course Coordinates Saved!");
+        }
+
+        // Export active course JSON coordinates
+        function exportCoordsToJson() {
+            const activeHoles = courses[activeCourse].holes;
+            document.getElementById('courseJsonTextarea').value = JSON.stringify(activeHoles, null, 2);
+        }
+
+        // Load custom course JSON coordinates
+        function loadCoordsFromJson() {
+            const textarea = document.getElementById('courseJsonTextarea');
+            try {
+                const parsed = JSON.parse(textarea.value);
+                
+                // Validate coordinates structure
+                for (let i = 1; i <= 18; i++) {
+                    if (!parsed[i] || typeof parsed[i].lat !== 'number' || typeof parsed[i].lon !== 'number') {
+                        throw new Error(`Missing or malformed coordinates for Hole ${i}`);
+                    }
+                }
+                
+                courses[activeCourse].holes = parsed;
+                saveCoursesToStorage();
+                renderHolesEditorInputs();
+                recalculateDistance();
+                showToast("JSON Coordinates Imported!");
+            } catch(e) {
+                alert(`Import failed: ${e.message}. Format must match exact export layout.`);
+            }
+        }
+
+        // 10. Shot History Log rendering
         function renderShotLog() {
             const container = document.getElementById('shotLogContainer');
             const shots = getShotsFromStorage();
             
-            // Set counter count
-            document.getElementById('logCount').innerText = shots.length;
+            const activeCourseShots = shots.filter(s => s.course === activeCourse);
+            document.getElementById('logCount').innerText = activeCourseShots.length;
 
-            if (shots.length === 0) {
-                container.innerHTML = `<div id="emptyLogText" class="p-4 text-center text-xs text-slate-500 italic">No shots logged yet. Take your first shot!</div>`;
+            if (activeCourseShots.length === 0) {
+                container.innerHTML = `<div id="emptyLogText" class="p-4 text-center text-xs text-slate-500 italic">No shots logged yet.</div>`;
                 return;
             }
 
-            // Sort shots: highest hole first, highest shot first
-            const sortedShots = [...shots].sort((a, b) => {
+            // Sort: highest hole first, highest shot first
+            const sorted = [...activeCourseShots].sort((a, b) => {
                 if (a.hole !== b.hole) return b.hole - a.hole;
                 return b.shot - a.shot;
             });
 
-            container.innerHTML = sortedShots.map(s => `
+            container.innerHTML = sorted.map(s => `
                 <div class="px-4 py-2.5 flex items-center justify-between text-xs hover:bg-slate-850/50 transition-all">
                     <div class="flex items-center gap-2.5">
                         <span class="bg-slate-950 px-2 py-0.5 rounded font-extrabold text-[10px] text-emerald-400 border border-slate-800">H${s.hole}</span>
                         <div class="flex flex-col">
                             <span class="font-bold text-slate-200">Shot ${s.shot}: <span class="text-emerald-400 font-semibold">${s.lie}</span></span>
-                            <span class="text-[9px] text-slate-500">${new Date(s.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • Pin: ${s.pin}</span>
+                            <span class="text-[9px] text-slate-500">${new Date(s.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -708,8 +1184,8 @@
             renderShotLog();
             showToast("Shot Deleted");
             
-            // Adjust current shot index back if appropriate
-            const currentHoleShots = shots.filter(s => s.hole === currentHole);
+            // Adjust current shot index back
+            const currentHoleShots = shots.filter(s => s.course === activeCourse && s.hole === currentHole);
             if (currentHoleShots.length > 0) {
                 currentShot = Math.max(...currentHoleShots.map(s => s.shot)) + 1;
             } else {
@@ -718,48 +1194,78 @@
             updateUI();
         }
 
-        // 9. Export CSV to Clipboard
+        // Helper storage get/set
+        function getShotsFromStorage() {
+            const raw = localStorage.getItem('caddyshot_round_overhaul');
+            return raw ? JSON.parse(raw) : [];
+        }
+
+        function saveShotsToStorage(shots) {
+            localStorage.setItem('caddyshot_round_overhaul', JSON.stringify(shots));
+        }
+
+        function loadRoundState() {
+            const shots = getShotsFromStorage();
+            const activeCourseShots = shots.filter(s => s.course === activeCourse);
+            
+            if (activeCourseShots.length > 0) {
+                const highestHole = Math.max(...activeCourseShots.map(s => s.hole));
+                currentHole = highestHole;
+                const holeShots = activeCourseShots.filter(s => s.hole === currentHole);
+                currentShot = Math.max(...holeShots.map(s => s.shot)) + 1;
+            } else {
+                currentHole = 1; // Always start on hole 1
+                currentShot = 1;
+            }
+            updateUI();
+        }
+
+        // 11. CSV Clipboard Exporter
         function copyCSVExport() {
             const shots = getShotsFromStorage();
-            if (shots.length === 0) {
-                showToast("No logged shots to export");
+            const activeCourseShots = shots.filter(s => s.course === activeCourse);
+
+            if (activeCourseShots.length === 0) {
+                showToast("No shots logged to export");
                 return;
             }
 
-            // Generate CSV
-            let csvContent = "Hole,Shot,Lie,Distance (Yds),Pin Position,Override,Timestamp\n";
-            shots.forEach(s => {
-                csvContent += `${s.hole},${s.shot},${s.lie},${s.distance},${s.pin},${s.isOverride ? 'Yes' : 'No'},${s.timestamp}\n`;
+            let csv = "Course,Hole,Shot,Lie,Distance (Yds),Manual Override,Green Latitude,Green Longitude,Timestamp\n";
+            activeCourseShots.forEach(s => {
+                csv += `"${s.course}",${s.hole},${s.shot},"${s.lie}",${s.distance},${s.isOverride ? 'Yes' : 'No'},${s.greenLat},${s.greenLon},${s.timestamp}\n`;
             });
 
-            // Write to Clipboard
-            navigator.clipboard.writeText(csvContent).then(() => {
-                showToast("CSV Block Copied!");
+            navigator.clipboard.writeText(csv).then(() => {
+                showToast("CSV Copied to Clipboard!");
             }).catch(err => {
-                console.error("Failed to copy CSV: ", err);
-                showToast("Export failed. Check console.");
+                console.error("Export Error:", err);
+                showToast("Export failed.");
             });
         }
 
-        // 10. Reset Round data
+        // 12. Reset Round Data
         function confirmReset() {
-            if (confirm("Are you sure you want to clear this entire round's data? This cannot be undone.")) {
-                localStorage.removeItem('caddyshot_round');
-                currentHole = 1;
+            if (confirm("Are you sure you want to clear all logged shots for this course? This cannot be undone.")) {
+                let shots = getShotsFromStorage();
+                shots = shots.filter(s => s.course !== activeCourse); // Clear only active course shots
+                saveShotsToStorage(shots);
+                
+                currentHole = 1; // Reset to Hole 1
                 currentShot = 1;
-                selectedPin = 'center';
                 selectLie('Tee');
                 clearManualOverride();
+                
                 updateUI();
                 renderShotLog();
-                showToast("Round Reset Successfully");
+                recalculateDistance();
+                showToast("Course History Reset!");
             }
         }
 
-        // UI toggles and updates
+        // UI toggles & indicators
         function updateUI() {
             document.getElementById('currentHoleDisplay').innerText = currentHole;
-            document.getElementById('holeNameDisplay').innerText = HOLE_DATABASE[currentHole].name;
+            document.getElementById('courseNameDisplay').innerText = activeCourse;
             document.getElementById('currentShotDisplay').innerText = currentShot;
         }
 
@@ -769,6 +1275,8 @@
             if (dev.classList.contains('hidden')) {
                 dev.classList.remove('hidden');
                 arrow.classList.add('rotate-180');
+                // Trigger map refresh to ensure Leaflet size bounds are calculated
+                if (map) setTimeout(() => map.invalidateSize(), 50);
             } else {
                 dev.classList.add('hidden');
                 arrow.classList.remove('rotate-180');
@@ -787,16 +1295,16 @@
             }
         }
 
-        // Flash beautiful toast
+        // Flash beautiful toast message
         function showToast(msg) {
             const toast = document.getElementById('toastAlert');
             const message = document.getElementById('toastMessage');
             message.innerText = msg;
-            toast.className = "absolute bottom-24 left-1/2 -translate-x-1/2 z-50 bg-emerald-600/95 text-white font-semibold text-xs py-2.5 px-5 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 transition-all duration-300 transform scale-100 opacity-100";
+            toast.className = "absolute bottom-28 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/95 text-white font-semibold text-xs py-2.5 px-5 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 transition-all duration-300 transform scale-100 opacity-100";
             
             setTimeout(() => {
-                toast.className = "pointer-events-none opacity-0 transform translate-y-3 transition-all duration-300 absolute bottom-24 left-1/2 -translate-x-1/2 z-50 bg-emerald-600/90 text-white font-semibold text-xs py-2 px-4 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5";
-            }, 2500);
+                toast.className = "pointer-events-none opacity-0 transform translate-y-3 transition-all duration-300 absolute bottom-28 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/90 text-white font-semibold text-xs py-2 px-4 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5";
+            }, 2300);
         }
     </script>
 </body>
