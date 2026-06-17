@@ -2,8 +2,14 @@
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CaddyShot // GPS Satellite Hole Overview</title>
+    
+    <!-- Mobile Web App Capable (Hides browser navigation bar on Home Screen launch) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="CaddyShot">
+    <meta name="mobile-web-app-capable" content="yes">
     
     <!-- Tailwind CSS v3 CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -218,21 +224,7 @@
                 </div>
             </div>
 
-            <!-- Dev GPS Simulator Console -->
-            <div class="bg-slate-950/40 border border-slate-800/80 rounded-xl overflow-hidden transition-all duration-300 shadow">
-                <button onclick="toggleDevConsole()" class="w-full px-4 py-1.5 flex items-center justify-between text-slate-400 hover:text-slate-300 font-bold text-[10px] uppercase tracking-wider">
-                    <span class="flex items-center gap-1.5">🛠️ Simulator</span>
-                    <svg id="devArrow" class="w-3 h-3 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                </button>
-                <div id="devConsoleContent" class="hidden border-t border-slate-800/40 p-2.5 bg-slate-950/60 grid grid-cols-3 gap-1.5 text-[10px]">
-                    <button onclick="setSimulation(null)" class="col-span-3 py-1 bg-slate-800 rounded font-semibold text-slate-300 hover:bg-slate-700">Real GPS</button>
-                    <button onclick="setSimulation(250)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">250 Yds</button>
-                    <button onclick="setSimulation(150)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">150 Yds</button>
-                    <button onclick="setSimulation(75)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">75 Yds</button>
-                    <button onclick="setSimulation(15)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">15 Yds</button>
-                    <button onclick="setSimulation(3)" class="py-1 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded font-semibold hover:bg-amber-500/20">3 Yds</button>
-                </div>
-            </div>
+
 
             <!-- Visual Shot History / Collapsible -->
             <div class="bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden transition-all duration-300">
@@ -248,26 +240,16 @@
         </main>
 
         <!-- Bottom Action Bar (Fixed at bottom of mobile viewport) -->
-        <footer class="absolute bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur border-t border-slate-800 p-4 z-10 space-y-2">
-            
-            <!-- Manual Distance Keypad Trigger Button -->
-            <button onclick="openKeypadModal()" class="w-full bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-center text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 active:scale-95">
-                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                Manual Distance Keypad (yards)
-            </button>
-
-            <!-- Main ENTER SHOT Button -->
-            <button onclick="submitShot()" id="enterShotBtn" class="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-bold py-3.5 rounded-xl text-center text-sm uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all">
-                Shot Complete
-            </button>
-
-            <!-- Secondary Actions Row -->
-            <div class="flex gap-2">
-                <button onclick="copyCSVExport()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-300 border border-slate-800 font-bold py-1.5 rounded-lg text-[9px] uppercase tracking-wider transition-all">
-                    Export CSV
+        <footer class="absolute bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur border-t border-slate-800 p-4 z-10">
+            <div class="flex gap-2 w-full">
+                <!-- Main ENTER SHOT Button (4/5 width) -->
+                <button onclick="submitShot()" id="enterShotBtn" class="flex-[4] bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all">
+                    Shot Complete
                 </button>
-                <button onclick="confirmReset()" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-rose-400 border border-slate-800 font-bold py-1.5 rounded-lg text-[9px] uppercase tracking-wider transition-all">
-                    Reset Round
+
+                <!-- Manual Distance Keypad Trigger Button (1/5 width, icon only) -->
+                <button onclick="openKeypadModal()" class="flex-[1] bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-bold rounded-xl flex items-center justify-center transition-all active:scale-95" title="Manual Distance Keypad">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                 </button>
             </div>
         </footer>
@@ -384,6 +366,19 @@
                         <div id="holesInputsContainer" class="space-y-3 max-h-[260px] overflow-y-auto pr-1 no-scrollbar">
                             <!-- JS generates 18 hole rows -->
                         </div>
+                    </div>
+                </div>
+
+                <!-- Round Actions (Export & Reset) -->
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Round Actions</label>
+                    <div class="flex gap-2">
+                        <button onclick="copyCSVExport()" class="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-850 text-slate-300 font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                            Export CSV
+                        </button>
+                        <button onclick="confirmReset()" class="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-850 text-rose-400 font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                            Reset Round
+                        </button>
                     </div>
                 </div>
 
@@ -792,7 +787,8 @@
             }
 
             if (isCaptureMode) {
-                setCaptureHole(currentHole);
+                captureHoleNum = currentHole;
+                document.getElementById('captureHoleNum').innerText = currentHole;
             }
 
             clearManualOverride();
@@ -802,10 +798,16 @@
 
         function getActiveHoleCoords() {
             const courseData = courses[activeCourse];
-            if (courseData && courseData.holes[currentHole]) {
+            if (courseData && courseData.holes && courseData.holes[currentHole]) {
                 return courseData.holes[currentHole];
             }
-            return { lat: 36.568600, lon: -121.948200, teeLat: 36.566800, teeLon: -121.948400 };
+            // Safe coordinates fallback for Hole 4-18 if they don't exist in localstorage DB yet
+            return { 
+                lat: 36.568600 + (currentHole * 0.0002), 
+                lon: -121.948200 + (currentHole * 0.0002),
+                teeLat: 36.566800 + (currentHole * 0.0002),
+                teeLon: -121.948400 + (currentHole * 0.0002)
+            };
         }
 
         // 5. GPS Simulation Toggles
@@ -1035,6 +1037,7 @@
         }
 
         function closeCourseModal() {
+            saveCourseSettings();
             document.getElementById('courseModal').classList.add('hidden');
         }
 
