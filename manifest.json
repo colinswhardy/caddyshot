@@ -1,0 +1,24 @@
+{
+  "short_name": "CaddyShot",
+  "name": "CaddyShot GPS Tracker",
+  "description": "Premium mobile-first GPS golf shot tracking application",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/512/golf-ball.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://img.icons8.com/color/192/golf-ball.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    }
+  ]
+}
