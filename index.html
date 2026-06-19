@@ -470,7 +470,8 @@
 
             DEFAULT_COURSES[name] = {
                 name: name,
-                holes: holes
+                holes: holes,
+                isMathematical: true
             };
         });
 
@@ -544,6 +545,10 @@
             
             selectLie('Tee');
             renderShotLog();
+
+            if (courses[activeCourse] && courses[activeCourse].isMathematical) {
+                fetchAndUpgradeMathematicalCourse(activeCourse);
+            }
         });
 
         // 1. MapLibre GL JS Initialisation (Vector Satellite tiles with rotation)
@@ -1295,6 +1300,10 @@
                             courses[key].holes[h] = JSON.parse(JSON.stringify(defHoles[h]));
                         }
                     }
+                    // Flag as mathematical if it is one of the default courses and has not been upgraded or manually edited
+                    if (!courses[key].isRealOSM && !courses[key].isManuallyModified) {
+                        courses[key].isMathematical = true;
+                    }
                 }
             });
             if (courses["Pebble Beach"]) {
@@ -1339,6 +1348,130 @@
             localStorage.setItem('caddyshot_active_course', activeCourse);
         }
 
+        // Helper to compute course center coordinate
+        function getCourseCenter(courseObj) {
+            let sumLat = 0, sumLon = 0, count = 0;
+            for (let h in courseObj.holes) {
+                const hole = courseObj.holes[h];
+                if (hole && hole.lat && hole.lon) {
+                    sumLat += hole.lat;
+                    sumLon += hole.lon;
+                    count++;
+                }
+            }
+            if (count > 0) {
+                return { lat: sumLat / count, lon: sumLon / count };
+            }
+            return null;
+        }
+
+        // Background task to fetch real coordinates from OSM Overpass API
+        async function fetchAndUpgradeMathematicalCourse(courseName) {
+            const courseObj = courses[courseName];
+            if (!courseObj || !courseObj.isMathematical) return;
+
+            const center = getCourseCenter(courseObj);
+            if (!center) return;
+
+            console.log(`Starting background real coordinate fetch for: ${courseName} around (${center.lat}, ${center.lon})`);
+            showToast(`Updating ${courseName} with real GPS coordinates...`);
+
+            // Find all greens, pins, or tees mapped in OSM within 2km of the course center
+            const query = `[out:json];(node["golf"~"green|tee|pin"](around:2000,${center.lat},${center.lon});way["golf"~"green|tee|pin"](around:2000,${center.lat},${center.lon}););out center;`;
+            
+            const mirrors = [
+                "https://overpass-api.de/api/interpreter",
+                "https://overpass.kumi.systems/api/interpreter",
+                "https://overpass.nchc.org.tw/api/interpreter"
+            ];
+
+            let elements = [];
+            for (let mirror of mirrors) {
+                try {
+                    const url = `${mirror}?data=${encodeURIComponent(query)}`;
+                    const response = await fetch(url, {
+                        headers: { "Accept": "application/json" }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.elements && data.elements.length > 0) {
+                            elements = data.elements;
+                            break; // Success, stop trying other mirrors
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`OSM mirror ${mirror} failed:`, err);
+                }
+            }
+
+            if (elements.length === 0) {
+                console.warn(`Could not fetch OSM coordinates for ${courseName}`);
+                // Remove mathematical flag to prevent infinite retries, but keep mathematical coordinates
+                delete courseObj.isMathematical;
+                saveCoursesToStorage();
+                return;
+            }
+
+            let greensFound = 0;
+            let teesFound = 0;
+
+            elements.forEach(el => {
+                const tags = el.tags || {};
+                const holeRef = tags.ref || tags.hole;
+                if (!holeRef) return;
+
+                const holeNum = parseInt(holeRef, 10);
+                if (isNaN(holeNum) || holeNum < 1 || holeNum > 18) return;
+
+                const lat = el.center ? el.center.lat : el.lat;
+                const lon = el.center ? el.center.lon : el.lon;
+                if (!lat || !lon) return;
+
+                const hole = courseObj.holes[holeNum];
+                if (!hole) return;
+
+                const type = tags.golf;
+                if (type === 'green' || type === 'pin') {
+                    hole.lat = lat;
+                    hole.lon = lon;
+                    greensFound++;
+                } else if (type === 'tee') {
+                    const color = tags.color || tags.tee || tags.name || "Standard";
+                    let normalizedColor = "White"; // Default fallback
+                    const lowerColor = color.toLowerCase();
+                    if (lowerColor.includes("blue")) normalizedColor = "Blue";
+                    else if (lowerColor.includes("white")) normalizedColor = "White";
+                    else if (lowerColor.includes("red")) normalizedColor = "Red";
+
+                    if (!hole.tees[normalizedColor]) {
+                        hole.tees[normalizedColor] = { name: normalizedColor, yardage: 0, slope: 0, rating: 0 };
+                    }
+                    hole.tees[normalizedColor].lat = lat;
+                    hole.tees[normalizedColor].lon = lon;
+
+                    // Sync standard tee coordinates
+                    if (normalizedColor === activeTeeColor || !hole.teeLat) {
+                        hole.teeLat = lat;
+                        hole.teeLon = lon;
+                    }
+                    teesFound++;
+                }
+            });
+
+            console.log(`OSM Upgrade completed for ${courseName}: found ${greensFound} greens and ${teesFound} tees.`);
+            
+            // Success: mark as upgraded and remove mathematical flag
+            courseObj.isRealOSM = true;
+            delete courseObj.isMathematical;
+            saveCoursesToStorage();
+
+            if (courseName === activeCourse) {
+                showToast(`Real coordinates loaded for ${courseName}!`);
+                updateUI();
+                recalculateDistance(true);
+            }
+        }
+
         function openCourseModal() {
             populateCourseSelectDropdown();
             renderHolesEditorInputs();
@@ -1380,6 +1513,10 @@
             
             updateUI();
             recalculateDistance(true);
+
+            if (courses[activeCourse] && courses[activeCourse].isMathematical) {
+                fetchAndUpgradeMathematicalCourse(activeCourse);
+            }
         }
 
         // Modal Shot History Log triggers
@@ -1502,7 +1639,8 @@
                 const newCourse = {
                     name: courseName,
                     id: courseId,
-                    holes: {}
+                    holes: {},
+                    isMathematical: true
                 };
 
                 const rawHoles = detailsData.holes || [];
@@ -1585,6 +1723,7 @@
                 currentShot = 1;
                 updateUI();
                 recalculateDistance(true);
+                fetchAndUpgradeMathematicalCourse(courseName);
             } catch (error) {
                 console.error("GolfCourseAPI import error, fallback to blank course:", error);
                 showToast("API import failed. Creating local blank course.");
@@ -1623,7 +1762,8 @@
 
             courses[name] = {
                 name: name,
-                holes: newHoles
+                holes: newHoles,
+                isMathematical: true
             };
 
             activeCourse = name;
@@ -1659,6 +1799,7 @@
 
             createBlankCourseFallback(name);
             showToast(`Created Course: ${name}`);
+            fetchAndUpgradeMathematicalCourse(name);
         }
 
         function deleteCurrentCourse() {
@@ -1821,6 +1962,7 @@
 
         function saveCourseSettings() {
             try {
+                courses[activeCourse].isManuallyModified = true;
                 const maxHoles = Object.keys(courses[activeCourse].holes).length;
                 for (let i = 1; i <= maxHoles; i++) {
                     const latInput = document.getElementById(`lat-input-${i}`);
@@ -1872,7 +2014,7 @@
         function getOffsetCoordinate(cursorLngLat) {
             if (!map) return cursorLngLat;
             const cursorPt = map.project(cursorLngLat);
-            const dotPt = [cursorPt.x - 30, cursorPt.y - 60];
+            const dotPt = [cursorPt.x - 10, cursorPt.y - 25];
             return map.unproject(dotPt);
         }
 
@@ -1881,8 +2023,8 @@
 
             marker.on('dragstart', () => {
                 isDraggingMarker = true;
-                // Visually position the dot 30px left and 60px up from finger to avoid occlusion
-                marker.setOffset([-30, -60]);
+                // Visually position the dot 10px left and 25px up from finger to avoid occlusion
+                marker.setOffset([-10, -25]);
             });
 
             marker.on('drag', () => {
@@ -1914,6 +2056,7 @@
                     tempGreenLoc = null; // Clear temporary override
                     const courseData = courses[activeCourse];
                     if (courseData && courseData.holes && courseData.holes[currentHole]) {
+                        courseData.isManuallyModified = true;
                         courseData.holes[currentHole].lat = actualLngLat.lat;
                         courseData.holes[currentHole].lon = actualLngLat.lng;
                     }
@@ -1922,6 +2065,7 @@
                     tempTeeLoc = null; // Clear temporary override
                     const courseData = courses[activeCourse];
                     if (courseData && courseData.holes && courseData.holes[currentHole]) {
+                        courseData.isManuallyModified = true;
                         const holeData = courseData.holes[currentHole];
                         if (activeTeeColor && activeTeeColor !== "Standard" && holeData.tees && holeData.tees[activeTeeColor]) {
                             holeData.tees[activeTeeColor].lat = actualLngLat.lat;
