@@ -382,6 +382,17 @@
                         </div>
                     </div>
 
+                    <!-- Map Satellite Source Selector -->
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-2">
+                        <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Satellite Map Source</label>
+                        <select id="mapSourceSelect" onchange="onMapSourceChange()" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-xs text-slate-200 font-bold focus:outline-none focus:border-emerald-500">
+                            <option value="google-satellite">Google Satellite (High Res)</option>
+                            <option value="google-hybrid">Google Hybrid (Satellite + Labels)</option>
+                            <option value="esri">Esri World Imagery (Standard)</option>
+                            <option value="eox">EOX Cloudless Satellite</option>
+                        </select>
+                    </div>
+
                     <!-- Round Actions (Export & Reset) -->
                     <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-2">
                         <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Round Actions</label>
@@ -556,6 +567,16 @@
             try {
                 const targetGreen = getActiveHoleCoords();
 
+                const savedSource = localStorage.getItem('caddyshot_map_source') || 'google-satellite';
+                const tileUrls = {
+                    'google-satellite': 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+                    'google-hybrid': 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                    'esri': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                    'eox': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg'
+                };
+                const tileUrl = tileUrls[savedSource] || tileUrls['google-satellite'];
+                const sourceMaxZoom = savedSource.startsWith('google') ? 22 : 19;
+
                 map = new maplibregl.Map({
                     container: 'map',
                     style: {
@@ -563,10 +584,9 @@
                         sources: {
                             'satellite-tiles': {
                                 type: 'raster',
-                                tiles: [
-                                    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                                ],
-                                tileSize: 256
+                                tiles: [tileUrl],
+                                tileSize: 256,
+                                maxzoom: sourceMaxZoom
                             }
                         },
                         layers: [
@@ -575,7 +595,7 @@
                                 type: 'raster',
                                 source: 'satellite-tiles',
                                 minzoom: 0,
-                                maxzoom: 19
+                                maxzoom: 22
                             }
                         ]
                     },
@@ -1475,6 +1495,13 @@
         function openCourseModal() {
             populateCourseSelectDropdown();
             renderHolesEditorInputs();
+            
+            // Set the map source dropdown selection
+            const mapSelect = document.getElementById('mapSourceSelect');
+            if (mapSelect) {
+                mapSelect.value = localStorage.getItem('caddyshot_map_source') || 'google-satellite';
+            }
+            
             document.getElementById('courseModal').classList.remove('hidden');
         }
 
@@ -1516,6 +1543,51 @@
 
             if (courses[activeCourse] && courses[activeCourse].isMathematical) {
                 fetchAndUpgradeMathematicalCourse(activeCourse);
+            }
+        }
+
+        function onMapSourceChange() {
+            const select = document.getElementById('mapSourceSelect');
+            if (!select || !map) return;
+            const newSource = select.value;
+            localStorage.setItem('caddyshot_map_source', newSource);
+            
+            const tileUrls = {
+                'google-satellite': 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+                'google-hybrid': 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                'esri': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                'eox': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg'
+            };
+            const tileUrl = tileUrls[newSource] || tileUrls['google-satellite'];
+            const sourceMaxZoom = newSource.startsWith('google') ? 22 : 19;
+
+            try {
+                if (map.getLayer('satellite-layer')) {
+                    map.removeLayer('satellite-layer');
+                }
+                if (map.getSource('satellite-tiles')) {
+                    map.removeSource('satellite-tiles');
+                }
+
+                map.addSource('satellite-tiles', {
+                    type: 'raster',
+                    tiles: [tileUrl],
+                    tileSize: 256,
+                    maxzoom: sourceMaxZoom
+                });
+
+                map.addLayer({
+                    id: 'satellite-layer',
+                    type: 'raster',
+                    source: 'satellite-tiles',
+                    minzoom: 0,
+                    maxzoom: 22
+                }, map.getLayer('route-line') ? 'route-line' : undefined);
+
+                showToast(`Map updated to ${select.options[select.selectedIndex].text}`);
+            } catch (err) {
+                console.error("Error updating map source:", err);
+                showToast("Failed to update map style.");
             }
         }
 
