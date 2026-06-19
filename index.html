@@ -855,11 +855,24 @@
                 }
 
                 let userLngLat = null;
+                let isFarFromTee = false;
                 if (userLocation) {
-                    const distYards = calculateDistanceYards(
-                        userLocation.lat, userLocation.lon,
-                        targetGreen.lat, targetGreen.lon
-                    );
+                    const distFromTee = calculateDistanceYards(userLocation.lat, userLocation.lon, teeLat, teeLon);
+                    if (distFromTee > 650) {
+                        isFarFromTee = true;
+                    }
+                }
+
+                if (userLocation) {
+                    let distYards;
+                    if (isFarFromTee) {
+                        distYards = calculateDistanceYards(teeLat, teeLon, targetGreen.lat, targetGreen.lon);
+                    } else {
+                        distYards = calculateDistanceYards(
+                            userLocation.lat, userLocation.lon,
+                            targetGreen.lat, targetGreen.lon
+                        );
+                    }
 
                     if (!isManualMode) {
                         const distEl = document.getElementById('distanceDisplay');
@@ -886,9 +899,10 @@
                     }
                 }
 
-                const startLat = userLocation ? userLocation.lat : teeLat;
-                const startLon = userLocation ? userLocation.lon : teeLon;
-                const startLngLat = userLngLat ? userLngLat : teeLngLat;
+                const useTeeAsStart = !userLocation || isFarFromTee;
+                const startLat = useTeeAsStart ? teeLat : userLocation.lat;
+                const startLon = useTeeAsStart ? teeLon : userLocation.lon;
+                const startLngLat = useTeeAsStart ? teeLngLat : userLngLat;
 
                 // Update Map visual lines
                 const source = map.getSource('route');
@@ -977,7 +991,7 @@
                 // Smart zoom viewport sizing: fits elements between top badges and bottom controls
                 if (shouldFitBounds) {
                     let includeUserInZoom = false;
-                    if (userLocation) {
+                    if (userLocation && !isFarFromTee) {
                         const distFromGreen = calculateDistanceYards(userLocation.lat, userLocation.lon, targetGreen.lat, targetGreen.lon);
                         if (distFromGreen < 800) {
                             includeUserInZoom = true;
@@ -1129,12 +1143,17 @@
             const dist = parseInt(displayVal, 10);
             const targetGreen = getActiveHoleCoords();
 
-            // If it's the first shot (Hole Start), record the tee coordinates as the current user location (if GPS available)
+            // If it's the first shot (Hole Start), record the tee coordinates as the current user location (if GPS available and user is within 650 yards of the tee box)
             if (currentShot === 1 && userLocation) {
-                if (courses[activeCourse] && courses[activeCourse].holes && courses[activeCourse].holes[currentHole]) {
-                    courses[activeCourse].holes[currentHole].teeLat = userLocation.lat;
-                    courses[activeCourse].holes[currentHole].teeLon = userLocation.lon;
-                    saveCoursesToStorage();
+                const teeLat = targetGreen.teeLat || (targetGreen.lat - 0.0012);
+                const teeLon = targetGreen.teeLon || targetGreen.lon;
+                const distFromTee = calculateDistanceYards(userLocation.lat, userLocation.lon, teeLat, teeLon);
+                if (distFromTee <= 650) {
+                    if (courses[activeCourse] && courses[activeCourse].holes && courses[activeCourse].holes[currentHole]) {
+                        courses[activeCourse].holes[currentHole].teeLat = userLocation.lat;
+                        courses[activeCourse].holes[currentHole].teeLon = userLocation.lon;
+                        saveCoursesToStorage();
+                    }
                 }
             }
             
@@ -1232,12 +1251,17 @@
             const dist = parseInt(displayVal, 10);
             const targetGreen = getActiveHoleCoords();
 
-            // If it's the first shot (Hole Start), record the tee coordinates as the current user location (if GPS available)
+            // If it's the first shot (Hole Start), record the tee coordinates as the current user location (if GPS available and user is within 650 yards of the tee box)
             if (currentShot === 1 && userLocation) {
-                if (courses[activeCourse] && courses[activeCourse].holes && courses[activeCourse].holes[currentHole]) {
-                    courses[activeCourse].holes[currentHole].teeLat = userLocation.lat;
-                    courses[activeCourse].holes[currentHole].teeLon = userLocation.lon;
-                    saveCoursesToStorage();
+                const teeLat = targetGreen.teeLat || (targetGreen.lat - 0.0012);
+                const teeLon = targetGreen.teeLon || targetGreen.lon;
+                const distFromTee = calculateDistanceYards(userLocation.lat, userLocation.lon, teeLat, teeLon);
+                if (distFromTee <= 650) {
+                    if (courses[activeCourse] && courses[activeCourse].holes && courses[activeCourse].holes[currentHole]) {
+                        courses[activeCourse].holes[currentHole].teeLat = userLocation.lat;
+                        courses[activeCourse].holes[currentHole].teeLon = userLocation.lon;
+                        saveCoursesToStorage();
+                    }
                 }
             }
             
