@@ -1733,13 +1733,28 @@
 
         function extractTeeColors(tags) {
             const colorsFound = new Set();
+            const knownColors = ['blue', 'orange', 'white', 'red', 'gold', 'yellow', 'black', 'green', 'silver'];
+            
             const standardKeys = ['teebox', 'tee', 'color', 'name'];
             standardKeys.forEach(k => {
                 if (tags[k]) {
                     const val = tags[k].toString().trim();
                     if (val && val.toLowerCase() !== 'yes' && val.toLowerCase() !== 'true') {
                         val.split(';').forEach(c => {
-                            if (c.trim()) colorsFound.add(capitalizeFirstLetter(c.trim()));
+                            const trimmed = c.trim().toLowerCase();
+                            if (trimmed) {
+                                if (k === 'name') {
+                                    knownColors.forEach(color => {
+                                        if (trimmed.includes(color)) {
+                                            colorsFound.add(capitalizeFirstLetter(color));
+                                        }
+                                    });
+                                } else {
+                                    if (!/^\d+$/.test(trimmed)) {
+                                        colorsFound.add(capitalizeFirstLetter(trimmed));
+                                    }
+                                }
+                            }
                         });
                     }
                 }
@@ -1749,7 +1764,6 @@
                 const lowerKey = k.toLowerCase();
                 if (lowerKey.includes('tee') || lowerKey.includes('color')) {
                     if (lowerKey === 'golf' || lowerKey === 'hole' || lowerKey === 'ref') return;
-                    const knownColors = ['blue', 'orange', 'white', 'red', 'gold', 'yellow', 'black', 'green', 'silver'];
                     knownColors.forEach(color => {
                         if (lowerKey.includes(color)) {
                             const val = tags[k].toString().trim().toLowerCase();
@@ -1780,7 +1794,7 @@
             showToast(`Updating ${courseName} from OSM...`);
 
             // Find all greens, pins, or tees mapped in OSM within 2.5km of the course center
-            const query = `[out:json];(node["golf"~"green|tee|teebox|pin"](around:2500,${center.lat},${center.lon});way["golf"~"green|tee|teebox|pin"](around:2500,${center.lat},${center.lon}););out center;`;
+            const query = `[out:json];(node[~"^golf"~"green|tee|teebox|pin|yes|true"](around:2500,${center.lat},${center.lon});way[~"^golf"~"green|tee|teebox|pin|yes|true"](around:2500,${center.lat},${center.lon}););out center;`;
             
             const mirrors = [
                 "https://overpass-api.de/api/interpreter",
@@ -1825,7 +1839,11 @@
 
             elements.forEach(el => {
                 const tags = el.tags || {};
-                const holeRef = tags.ref || tags.Hole || tags.hole;
+                let holeRef = tags.ref || tags.Hole || tags.hole;
+                if (!holeRef && tags.name) {
+                    const match = tags.name.match(/\d+/);
+                    if (match) holeRef = match[0];
+                }
                 if (!holeRef) return;
 
                 const holeNum = parseInt(holeRef, 10);
@@ -1838,7 +1856,22 @@
                 const hole = courseObj.holes[holeNum];
                 if (!hole) return;
 
-                const type = tags.golf;
+                let type = tags.golf;
+                if (!type) {
+                    Object.keys(tags).forEach(k => {
+                        const lowerKey = k.toLowerCase();
+                        if (lowerKey.startsWith('golf')) {
+                            const val = tags[k].toString().trim().toLowerCase();
+                            if (val === 'green' || val === 'pin' || val === 'tee' || val === 'teebox') {
+                                type = val;
+                            } else if (lowerKey.includes('green') || lowerKey.includes('pin')) {
+                                type = 'green';
+                            } else if (lowerKey.includes('tee')) {
+                                type = 'tee';
+                            }
+                        }
+                    });
+                }
                 if (type === 'green' || type === 'pin') {
                     hole.lat = lat;
                     hole.lon = lon;
@@ -2092,7 +2125,7 @@
                 showToast(`Found: ${osmName}. Querying OSM layout...`);
 
                 // Query Overpass for golf elements around the center
-                const query = `[out:json];(node["golf"~"green|tee|teebox|pin"](around:2500,${centerLat},${centerLon});way["golf"~"green|tee|teebox|pin"](around:2500,${centerLat},${centerLon}););out center;`;
+                const query = `[out:json];(node[~"^golf"~"green|tee|teebox|pin|yes|true"](around:2500,${centerLat},${centerLon});way[~"^golf"~"green|tee|teebox|pin|yes|true"](around:2500,${centerLat},${centerLon}););out center;`;
                 
                 const mirrors = [
                     "https://overpass-api.de/api/interpreter",
@@ -2130,7 +2163,7 @@
                 let holeRefs = [];
                 elements.forEach(el => {
                     const tags = el.tags || {};
-                    const holeRef = tags.ref || tags.Hole || tags.hole;
+                    let holeRef = tags.ref || tags.Hole || tags.hole;
                     if (holeRef) {
                         const hNum = parseInt(holeRef, 10);
                         if (!isNaN(hNum) && hNum > 0 && hNum <= 36) {
@@ -2183,7 +2216,11 @@
 
                 elements.forEach(el => {
                     const tags = el.tags || {};
-                    const holeRef = tags.ref || tags.Hole || tags.hole;
+                    let holeRef = tags.ref || tags.Hole || tags.hole;
+                    if (!holeRef && tags.name) {
+                        const match = tags.name.match(/\d+/);
+                        if (match) holeRef = match[0];
+                    }
                     if (!holeRef) return;
 
                     const holeNum = parseInt(holeRef, 10);
@@ -2196,7 +2233,22 @@
                     const hole = newCourse.holes[holeNum];
                     if (!hole) return;
 
-                    const type = tags.golf;
+                    let type = tags.golf;
+                    if (!type) {
+                        Object.keys(tags).forEach(k => {
+                            const lowerKey = k.toLowerCase();
+                            if (lowerKey.startsWith('golf')) {
+                                const val = tags[k].toString().trim().toLowerCase();
+                                if (val === 'green' || val === 'pin' || val === 'tee' || val === 'teebox') {
+                                    type = val;
+                                } else if (lowerKey.includes('green') || lowerKey.includes('pin')) {
+                                    type = 'green';
+                                } else if (lowerKey.includes('tee')) {
+                                    type = 'tee';
+                                }
+                            }
+                        });
+                    }
                     if (type === 'green' || type === 'pin') {
                         hole.lat = lat;
                         hole.lon = lon;
