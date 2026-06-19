@@ -1,4 +1,4 @@
-const CACHE_NAME = 'caddyshot-v11';
+const CACHE_NAME = 'caddyshot-v12';
 const ASSETS = [
   './',
   './index.html',
