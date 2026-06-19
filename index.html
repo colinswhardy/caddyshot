@@ -84,42 +84,254 @@
     <!-- Mobile Screen Wrapper (Fixed viewport layout) -->
     <div class="w-full max-w-md bg-slate-900 border-x border-slate-800 flex flex-col h-full relative overflow-hidden shadow-2xl">
         
+        <!-- Home Screen Overlay -->
+        <div id="home-screen" class="absolute inset-0 z-30 flex flex-col justify-between p-6 bg-slate-950/80 backdrop-blur-lg overflow-y-auto no-scrollbar transition-all duration-300">
+            <!-- Header -->
+            <div class="flex flex-col items-center mt-6">
+                <span class="text-xs font-black tracking-widest text-slate-400">CADDY<span class="text-emerald-500">SHOT</span></span>
+                <span class="text-[9px] text-slate-500 uppercase tracking-widest font-bold mt-1">Smart Golf GPS & Shot Tracker</span>
+            </div>
+
+            <!-- 3x2 Grid of 6 Tiles -->
+            <div class="grid grid-cols-2 gap-4 my-8">
+                <!-- Tile 1: Play -->
+                <button onclick="setView('play')" class="bg-slate-900/60 backdrop-blur border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between items-start h-32 hover:bg-slate-800/80 hover:border-emerald-500/50 transition-all active:scale-95 group">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
+                    </div>
+                    <div class="flex flex-col items-start text-left mt-2">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-200">Play</span>
+                        <span id="play-tile-status" class="text-[9px] text-slate-500 font-bold mt-0.5">Start New Round</span>
+                    </div>
+                </button>
+
+                <!-- Tile 2: Analyze -->
+                <button onclick="setView('analyze')" class="bg-slate-900/60 backdrop-blur border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between items-start h-32 hover:bg-slate-800/80 hover:border-emerald-500/50 transition-all active:scale-95 group">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                    </div>
+                    <div class="flex flex-col items-start text-left mt-2">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-200">Analyze</span>
+                        <span class="text-[9px] text-slate-500 font-bold mt-0.5">GPS Course Planner</span>
+                    </div>
+                </button>
+
+                <!-- Tile 3: Settings -->
+                <button onclick="setView('settings')" class="bg-slate-900/60 backdrop-blur border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between items-start h-32 hover:bg-slate-800/80 hover:border-emerald-500/50 transition-all active:scale-95 group">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                    <div class="flex flex-col items-start text-left mt-2">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-200">Settings</span>
+                        <span class="text-[9px] text-slate-500 font-bold mt-0.5">App Configuration</span>
+                    </div>
+                </button>
+
+                <!-- Tile 4: Last Round -->
+                <button onclick="viewLastRoundDetails()" class="bg-slate-900/60 backdrop-blur border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between items-start h-32 hover:bg-slate-800/80 hover:border-emerald-500/50 transition-all active:scale-95 group">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div class="flex flex-col items-start text-left mt-2 w-full overflow-hidden">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-200">Last Round</span>
+                        <span id="last-round-tile-status" class="text-[9px] text-slate-500 font-bold mt-0.5 truncate w-full">No rounds played</span>
+                    </div>
+                </button>
+
+                <!-- Tile 5: Blank (Stats / Club Distances) -->
+                <div class="bg-slate-900/30 backdrop-blur border border-slate-800/40 rounded-2xl p-4 flex flex-col justify-between items-start h-32 opacity-50 select-none">
+                    <div class="w-10 h-10 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-center text-slate-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 8v8m-4-5v5m-4-2v2M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    </div>
+                    <div class="flex flex-col items-start text-left mt-2">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500">Stats</span>
+                        <span class="text-[9px] text-slate-600 font-bold mt-0.5">Coming Soon</span>
+                    </div>
+                </div>
+
+                <!-- Tile 6: Blank -->
+                <div class="bg-slate-900/30 backdrop-blur border border-slate-800/40 rounded-2xl p-4 flex flex-col justify-between items-start h-32 opacity-50 select-none">
+                    <div class="w-10 h-10 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-center text-slate-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+                    </div>
+                    <div class="flex flex-col items-start text-left mt-2">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500">More</span>
+                        <span class="text-[9px] text-slate-600 font-bold mt-0.5">Blank Tile</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mb-6">
+                <span class="text-[8px] text-slate-600 uppercase tracking-widest font-extrabold">v2.1 // PWA ONLINE</span>
+            </div>
+        </div>
+
+        <!-- Settings Screen Overlay -->
+        <div id="settings-screen" class="hidden absolute inset-0 z-30 flex flex-col justify-between p-6 bg-slate-950/95 backdrop-blur-lg overflow-y-auto no-scrollbar transition-all duration-300">
+            <div>
+                <!-- Header -->
+                <div class="flex justify-between items-center mt-6 border-b border-slate-800 pb-3">
+                    <h3 class="text-sm font-black text-slate-200 uppercase tracking-widest">Global Settings</h3>
+                    <button onclick="setView('home')" class="text-slate-500 hover:text-slate-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Settings Content -->
+                <div class="space-y-4 mt-6">
+                    <!-- Course Selector / Add New -->
+                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Select Active Course</label>
+                            <div class="flex gap-2.5">
+                                <button onclick="syncActiveCourseWithOSM()" id="btnSyncOSMSettings" class="text-[9px] text-emerald-400 hover:underline font-bold">Sync with OSM</button>
+                                <span class="text-slate-700 text-[9px]">|</span>
+                                <button onclick="deleteCurrentCourse()" id="btnDeleteCourseSettings" class="text-[9px] text-rose-400 hover:underline font-bold">Delete Course</button>
+                            </div>
+                        </div>
+                        <select id="courseSelectSettings" onchange="onCourseSelectChangeSettings()" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-xs text-slate-200 font-bold focus:outline-none focus:border-emerald-500">
+                            <!-- Populated by JavaScript -->
+                        </select>
+
+                        <div class="border-t border-slate-800/40 my-2 pt-2">
+                            <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1">Create New Course</label>
+                            <div class="flex flex-col gap-2">
+                                <input type="text" id="newCourseNameSettings" placeholder="Course Name (e.g. Oakmont CC)" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-1.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <div class="flex gap-2">
+                                    <button onclick="createNewCourseSettings()" id="btnCreateCourseSettings" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all active:scale-95">
+                                        Import OSM
+                                    </button>
+                                    <button onclick="addCourseManuallySettings()" class="flex-1 bg-slate-950/60 border border-slate-800 hover:bg-slate-900 text-slate-300 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all active:scale-95">
+                                        Create Manual
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map Satellite Source Selector -->
+                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 space-y-2">
+                        <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Satellite Map Source</label>
+                        <select id="mapSourceSelectSettings" onchange="onMapSourceChangeSettings()" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-xs text-slate-200 font-bold focus:outline-none focus:border-emerald-500">
+                            <option value="google-satellite">Google Satellite (High Res)</option>
+                            <option value="google-hybrid">Google Hybrid (Satellite + Labels)</option>
+                            <option value="esri">Esri World Imagery (Standard)</option>
+                            <option value="eox">EOX Cloudless Satellite</option>
+                        </select>
+                    </div>
+
+                    <!-- Tee & Green GPS Editor -->
+                    <div class="space-y-2">
+                        <button onclick="toggleGpsEditorSectionSettings()" class="w-full bg-slate-950 border border-slate-855 hover:border-slate-800 text-slate-200 font-extrabold py-3 px-4 rounded-xl flex items-center justify-between transition-all active:scale-[0.98]">
+                            <span class="flex items-center gap-2 text-xs uppercase tracking-wider text-emerald-400 font-bold">
+                                <span>🎯</span> Tee & Green GPS Editor
+                            </span>
+                            <svg id="editorArrowSettings" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        
+                        <div id="gpsEditorSectionSettings" class="hidden space-y-3 mt-2">
+                            <div class="bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl text-[11px] text-emerald-400/80 leading-relaxed mb-2">
+                                <span class="font-extrabold uppercase text-[10px] text-emerald-400 block mb-0.5">💡 GPS Editor Mapping Instruction</span>
+                                Select the <span class="bg-slate-950 px-1 py-0.5 rounded text-amber-400 font-bold">🎯 Map</span> button on a Green or Tee box below, and click/tap anywhere on the satellite map to save that spot's coordinates.
+                            </div>
+                            <div id="holesInputsContainerSettings" class="space-y-3 max-h-[260px] overflow-y-auto pr-1 no-scrollbar">
+                                <!-- JS generates 18 hole rows -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <button onclick="saveCourseSettingsSettings(); setView('home');" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-3.5 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all active:scale-[0.98] mt-6">
+                Save & Exit
+            </button>
+        </div>
+
+        <!-- Last Round Detail Overlay -->
+        <div id="last-round-modal" class="hidden absolute inset-0 z-30 bg-slate-950/60 backdrop-blur-sm flex flex-col justify-end">
+            <div class="bg-slate-900/95 backdrop-blur-md border-t border-slate-800 rounded-t-3xl p-5 w-full h-[80vh] flex flex-col justify-between shadow-2xl">
+                <div>
+                    <!-- Sheet Handle Indicator -->
+                    <div class="w-12 h-1 bg-slate-800 rounded-full mx-auto mb-3"></div>
+                    
+                    <!-- Header -->
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h3 class="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-1.5">
+                            <span>🏆</span> Last Saved Round Details
+                        </h3>
+                        <button onclick="closeLastRoundModal()" class="text-slate-500 hover:text-slate-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Round Info Bar -->
+                    <div class="flex flex-col mt-4 bg-slate-950/40 border border-slate-800/80 p-3 rounded-xl">
+                        <div class="flex justify-between items-center">
+                            <span id="lastRoundCourse" class="font-extrabold text-xs text-emerald-400 uppercase tracking-wide truncate max-w-[200px]">Course Name</span>
+                            <span id="lastRoundStrokes" class="font-extrabold text-sm text-slate-100">-- Shots</span>
+                        </div>
+                        <span id="lastRoundDate" class="text-[9px] text-slate-500 font-bold mt-1">Date</span>
+                    </div>
+                </div>
+
+                <!-- Scrollable Hole-by-Hole Details -->
+                <div id="lastRoundDetailsContainer" class="flex-1 overflow-y-auto my-3 pr-1 space-y-2 no-scrollbar">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Footer Action Buttons -->
+                <div class="flex gap-2">
+                    <button onclick="exportLastRoundCSV()" class="flex-1 bg-slate-850 hover:bg-slate-800 border border-slate-800 py-3 rounded-xl text-xs uppercase font-extrabold tracking-widest text-slate-300 transition-all active:scale-[0.98]">
+                        Export CSV
+                    </button>
+                    <button onclick="closeLastRoundModal()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-3 rounded-xl text-xs uppercase font-extrabold tracking-widest text-slate-950 transition-all active:scale-[0.98]">
+                        Close Details
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Full Height Background Map -->
         <div id="map" class="absolute inset-0 w-full h-full z-0"></div>
 
-        <!-- Floating Header (Translucent Overlay) -->
-        <header class="bg-slate-950/70 backdrop-blur-md border-b border-slate-800/40 px-4 py-2.5 flex items-center justify-between absolute top-0 left-0 right-0 z-20">
-            <!-- Hole Selector -->
+        <header class="bg-slate-950/70 backdrop-blur-md border-b border-slate-800/40 px-3 py-2 flex items-center justify-between absolute top-0 left-0 right-0 z-20">
+            <!-- Home Button & Hole Selector -->
             <div class="flex items-center gap-1">
-                <button onclick="changeHole(-1)" class="w-11 h-11 rounded-xl bg-slate-950/40 hover:bg-slate-800/60 active:scale-90 flex items-center justify-center text-slate-400 transition-all border border-slate-800/30">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                <button onclick="setView('home')" class="w-10 h-10 rounded-xl bg-slate-950/40 hover:bg-slate-800/60 active:scale-90 flex items-center justify-center text-slate-400 transition-all border border-slate-800/30" title="Home Menu">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                 </button>
-                <div class="bg-slate-950/60 border border-slate-800/50 px-2.5 rounded-xl flex flex-col items-center min-w-[56px] backdrop-blur-sm justify-center h-11">
-                    <span class="text-[7px] uppercase tracking-wider text-slate-500 font-bold leading-none mb-0.5">Hole</span>
-                    <span id="currentHoleDisplay" class="text-sm font-extrabold text-emerald-400 leading-none">1</span>
+                
+                <button onclick="changeHole(-1)" class="w-10 h-10 rounded-xl bg-slate-950/40 hover:bg-slate-800/60 active:scale-90 flex items-center justify-center text-slate-400 transition-all border border-slate-800/30">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="bg-slate-950/60 border border-slate-800/50 px-2 rounded-xl flex flex-col items-center min-w-[48px] backdrop-blur-sm justify-center h-10">
+                    <span class="text-[6.5px] uppercase tracking-wider text-slate-500 font-bold leading-none mb-0.5">Hole</span>
+                    <span id="currentHoleDisplay" class="text-xs font-extrabold text-emerald-400 leading-none">1</span>
                 </div>
-                <button onclick="changeHole(1)" class="w-11 h-11 rounded-xl bg-slate-950/40 hover:bg-slate-800/60 active:scale-90 flex items-center justify-center text-slate-400 transition-all border border-slate-800/30">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                <button onclick="changeHole(1)" class="w-10 h-10 rounded-xl bg-slate-950/40 hover:bg-slate-800/60 active:scale-90 flex items-center justify-center text-slate-400 transition-all border border-slate-800/30">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                 </button>
             </div>
 
             <!-- Logo & Course Name & Tee Color Selector -->
-            <div class="flex flex-col items-center">
-                <span class="text-[10px] font-black tracking-widest text-slate-400">CADDY<span class="text-emerald-500">SHOT</span></span>
-                <span id="courseNameDisplay" class="text-[9px] text-emerald-400/80 font-bold uppercase tracking-wider max-w-[120px] truncate text-center mt-0.5">Innerkip Highlands</span>
-                <select id="teeColorSelect" onchange="onTeeColorChange()" class="mt-0.5 bg-slate-950/80 border border-slate-800/80 text-[8.5px] text-slate-300 rounded px-1.5 py-0.5 font-bold focus:outline-none focus:border-emerald-500">
+            <div class="flex flex-col items-center flex-1 mx-1 overflow-hidden">
+                <span id="logoText" class="text-[9px] font-black tracking-widest text-slate-400">CADDY<span class="text-emerald-500">SHOT</span></span>
+                <span id="courseNameDisplay" class="text-[8.5px] text-emerald-400/80 font-bold uppercase tracking-wider max-w-[100px] truncate text-center mt-0.5">Innerkip Highlands</span>
+                <select id="teeColorSelect" onchange="onTeeColorChange()" class="mt-0.5 bg-slate-950/80 border border-slate-800/80 text-[8px] text-slate-300 rounded px-1 py-0.5 font-bold focus:outline-none focus:border-emerald-500">
                     <option value="Standard">Standard</option>
                 </select>
             </div>
 
             <!-- Shot Display & Settings Trigger -->
             <div class="flex items-center gap-1">
-                <div class="bg-slate-950/60 border border-slate-800/50 px-2.5 rounded-xl flex flex-col items-center min-w-[56px] backdrop-blur-sm justify-center h-11">
-                    <span class="text-[7px] uppercase tracking-wider text-slate-500 font-bold leading-none mb-0.5">Shot</span>
-                    <span id="currentShotDisplay" class="text-sm font-extrabold text-emerald-400 leading-none">1</span>
+                <div id="shotDisplayContainer" class="bg-slate-950/60 border border-slate-800/50 px-2 rounded-xl flex flex-col items-center min-w-[48px] backdrop-blur-sm justify-center h-10">
+                    <span class="text-[6.5px] uppercase tracking-wider text-slate-500 font-bold leading-none mb-0.5">Shot</span>
+                    <span id="currentShotDisplay" class="text-xs font-extrabold text-emerald-400 leading-none">1</span>
                 </div>
-                <button onclick="openCourseModal()" class="w-11 h-11 rounded-xl bg-slate-950/40 hover:bg-slate-800/60 active:scale-90 flex items-center justify-center text-slate-400 transition-all border border-slate-800/30" title="Course Setup">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <button onclick="openCourseModal()" class="w-10 h-10 rounded-xl bg-slate-950/40 hover:bg-slate-800/60 active:scale-90 flex items-center justify-center text-slate-400 transition-all border border-slate-800/30" title="Course Setup">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
             </div>
         </header>
@@ -160,73 +372,83 @@
         </div>
 
         <!-- Floating Recenter / Refresh GPS button (Bottom right of Map) -->
-        <div id="refreshGpsContainer" class="absolute bottom-[235px] right-3 z-10 pointer-events-auto">
+        <div id="refreshGpsContainer" class="absolute bottom-4 right-4 z-10 pointer-events-auto">
             <button onclick="refreshGPS()" class="px-2.5 py-1.5 bg-slate-950/90 hover:bg-slate-900 border border-slate-800 rounded-lg text-emerald-400 font-extrabold text-[9px] uppercase tracking-wider flex items-center gap-1 shadow-lg shadow-slate-950/50 transition-all active:scale-95">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.228 10H18.228"/></svg>
                 Refresh GPS
             </button>
         </div>
 
-        <!-- Bottom Floating Control Card (Semi-transparent overlay, map texturable underneath) -->
-        <div id="bottomControlCard" class="absolute bottom-4 left-4 right-4 z-10 bg-slate-950/40 backdrop-blur-md border border-slate-800/40 rounded-2xl p-3 shadow-2xl flex flex-col space-y-3">
-                      <!-- Lie Selection Grid (Translucent see-through text-only buttons, 1/3 height) -->
-            <div class="grid grid-cols-3 gap-1.5">
-                
-                <!-- Tee Button -->
-                <button onclick="selectLie('Tee')" id="lie-Tee" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
-                    Tee
-                </button>
-
-                <!-- Fairway Button -->
-                <button onclick="selectLie('Fairway')" id="lie-Fairway" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
-                    Fairway
-                </button>
-
-                <!-- Rough Button -->
-                <button onclick="selectLie('Rough')" id="lie-Rough" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
-                    Rough
-                </button>
-
-                <!-- Sand Button -->
-                <button onclick="selectLie('Sand')" id="lie-Sand" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
-                    Sand
-                </button>
-
-                <!-- Green Button -->
-                <button onclick="selectLie('Green')" id="lie-Green" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
-                    Green
-                </button>
-
-                <!-- Penalty Button -->
-                <button onclick="selectLie('Penalty')" id="lie-Penalty" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
-                    Penalty
-                </button>
-
-            </div>
-
-            <!-- Footer Primary Action Row -->
-            <div class="flex gap-2 w-full">
-                <!-- Main Shot Complete Button (4/5 width) -->
-                <button onclick="submitShot()" id="enterShotBtn" class="flex-[4] bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all">
-                    Shot Complete
-                </button>
-
-                <!-- Finish Hole Button -->
-                <button onclick="finishHole()" id="finishHoleBtn" class="hidden bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest transition-all active:scale-95">
-                    Finish Hole
-                </button>
-
-                <!-- Manual Keypad Trigger Button (1/5 width, icon only) -->
-                <button onclick="openKeypadModal()" class="flex-[1] bg-slate-950/40 hover:bg-slate-900 border border-slate-800/40 text-slate-300 font-bold rounded-xl flex items-center justify-center transition-all active:scale-95" title="Manual Distance Keypad">
-                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                </button>
-            </div>
-
-            <!-- Sleek Shot Log Trigger Button -->
-            <button onclick="openLogModal()" class="w-full text-center text-slate-400 hover:text-slate-200 py-1.5 border-t border-slate-800/40 text-[10px] uppercase font-bold tracking-widest flex items-center justify-center gap-1.5">
-                <span>📋</span> View Shot Log (<span id="logCount">0</span>)
+        <!-- Bottom Left Stroke Tracker Card (Collapsible) -->
+        <div id="strokeTrackerCard" class="absolute bottom-4 left-4 z-20 flex flex-col-reverse items-start pointer-events-auto transition-all duration-300">
+            <!-- Closed State Button (Same size/style as Yardage Card) -->
+            <button onclick="toggleStrokeCard(event)" id="strokeCardTrigger" class="bg-slate-950/90 backdrop-blur border border-slate-800 rounded-xl px-4 py-1.5 flex flex-col items-center shadow-2xl hover:bg-slate-900 transition-all active:scale-95">
+                <div class="flex items-baseline">
+                    <span id="strokeCardShotDisplay" class="text-3xl font-black text-slate-100">1</span>
+                    <span class="text-xs font-bold text-emerald-400 ml-0.5">SHOT</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span id="strokeCardLabel" class="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Record</span>
+                </div>
             </button>
 
+            <!-- Expanded Controls Panel (rises above the button) -->
+            <div id="strokeCardExpanded" class="hidden mb-2 bg-slate-950/95 backdrop-blur-md border border-slate-800 rounded-2xl p-3 shadow-2xl flex flex-col space-y-3 w-[290px] transition-all">
+                <!-- Header -->
+                <div class="flex justify-between items-center border-b border-slate-800/60 pb-1.5">
+                    <span class="text-[9.5px] font-black tracking-widest text-slate-400 uppercase">RECORD SHOT <span class="text-emerald-500" id="expandedHoleDisplay">H1 S1</span></span>
+                    <button onclick="toggleStrokeCard(event)" class="text-slate-500 hover:text-slate-300 text-[10px] font-bold uppercase tracking-wider">Minimize</button>
+                </div>
+
+                <!-- Lie Selection Grid (Translucent see-through text-only buttons) -->
+                <div class="grid grid-cols-3 gap-1.5">
+                    <!-- Tee Button -->
+                    <button onclick="selectLie('Tee')" id="lie-Tee" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                        Tee
+                    </button>
+                    <!-- Fairway Button -->
+                    <button onclick="selectLie('Fairway')" id="lie-Fairway" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                        Fairway
+                    </button>
+                    <!-- Rough Button -->
+                    <button onclick="selectLie('Rough')" id="lie-Rough" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                        Rough
+                    </button>
+                    <!-- Sand Button -->
+                    <button onclick="selectLie('Sand')" id="lie-Sand" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                        Sand
+                    </button>
+                    <!-- Green Button -->
+                    <button onclick="selectLie('Green')" id="lie-Green" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                        Green
+                    </button>
+                    <!-- Penalty Button -->
+                    <button onclick="selectLie('Penalty')" id="lie-Penalty" class="py-1.5 rounded-lg border transition-all duration-200 bg-slate-950/20 border-slate-800/30 text-slate-400 hover:text-slate-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center active:scale-95">
+                        Penalty
+                    </button>
+                </div>
+
+                <!-- Footer Primary Action Row -->
+                <div class="flex gap-2 w-full">
+                    <!-- Main Shot Complete Button (4/5 width) -->
+                    <button onclick="submitShot()" id="enterShotBtn" class="flex-[4] bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all">
+                        Shot Complete
+                    </button>
+                    <!-- Finish Hole Button -->
+                    <button onclick="finishHole()" id="finishHoleBtn" class="hidden bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest transition-all active:scale-95">
+                        Finish Hole
+                    </button>
+                    <!-- Manual Keypad Trigger Button -->
+                    <button onclick="openKeypadModal()" class="flex-[1] bg-slate-950/40 hover:bg-slate-900 border border-slate-800/40 text-slate-300 font-bold rounded-xl flex items-center justify-center transition-all active:scale-95" title="Manual Distance Keypad">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    </button>
+                </div>
+
+                <!-- Sleek Shot Log Trigger Button -->
+                <button onclick="openLogModal()" class="w-full text-center text-slate-400 hover:text-slate-200 py-1.5 border-t border-slate-800/40 text-[10px] uppercase font-bold tracking-widest flex items-center justify-center gap-1.5">
+                    <span>📋</span> View Shot Log (<span id="logCount">0</span>)
+                </button>
+            </div>
         </div>
 
         <!-- Toast Notification Alerts -->
@@ -397,9 +619,12 @@
                         </select>
                     </div>
 
-                    <!-- Round Actions (Export & Reset) -->
+                    <!-- Round Actions (Save, Export & Reset) -->
                     <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-2">
                         <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Round Actions</label>
+                        <button onclick="saveActiveRound()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10 mb-2">
+                            💾 Save Round Data
+                        </button>
                         <div class="flex gap-2">
                             <button onclick="copyCSVExport()" class="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-850 text-slate-300 font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
                                 Export CSV
@@ -523,6 +748,8 @@
         let isCaptureMode = false;
         let captureHoleNum = 1;
         let captureTarget = 'green'; // 'green' or 'tee'
+        let captureSourceView = 'play';
+        let currentView = 'home';
 
         // Lie button class constants (avoids rebuilding long strings on every selectLie call)
         const LIE_BASE = 'py-1.5 rounded-lg border transition-all duration-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center';
@@ -564,6 +791,9 @@
             if (courses[activeCourse] && courses[activeCourse].isMathematical) {
                 fetchAndUpgradeMathematicalCourse(activeCourse);
             }
+
+            // Start on home screen by default
+            setView('home');
         });
 
         // 1. MapLibre GL JS Initialisation (Vector Satellite tiles with rotation)
@@ -605,7 +835,7 @@
                     },
                     center: [targetGreen.lon, targetGreen.lat],
                     zoom: 16,
-                    pitch: 0,
+                    pitch: 40,
                     bearing: 0,
                     interactive: true
                 });
@@ -735,7 +965,11 @@
                     } else if (e.originalEvent && e.originalEvent._lineClicked) {
                         // Handled by route-line-tap click listener
                     } else {
-                        // Regular map click - do nothing, to prevent accidental layup placements
+                        // Regular map click - close stroke card if open
+                        const expanded = document.getElementById('strokeCardExpanded');
+                        if (expanded && !expanded.classList.contains('hidden')) {
+                            expanded.classList.add('hidden');
+                        }
                     }
                 });
 
@@ -815,6 +1049,25 @@
                 }
             );
         }
+
+        // Visibility Change Listener to suspend GPS tracking in the background (saving battery)
+        document.addEventListener('visibilitychange', () => {
+            const statusDot = document.getElementById('gpsStatusDot');
+            const statusText = document.getElementById('gpsStatusText');
+
+            if (document.hidden) {
+                console.log("App hidden - clearing GPS watch to save battery.");
+                if (watchId !== null) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                }
+                if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-500";
+                if (statusText) statusText.innerText = "GPS Suspended";
+            } else {
+                console.log("App visible - restarting GPS watch.");
+                setupGeolocation();
+            }
+        });
 
         function refreshGPS() {
             setupGeolocation();
@@ -1009,9 +1262,10 @@
                     }
 
                     map.fitBounds(bounds, {
-                        padding: { top: 135, bottom: 260, left: 35, right: 35 },
+                        padding: { top: 135, bottom: 80, left: 35, right: 35 },
                         maxZoom: 18,
-                        duration: 600
+                        duration: 600,
+                        pitch: 40
                     });
                 }
             } catch(e) {
@@ -1157,6 +1411,7 @@
                 }
             }
             
+            const origin = getShotOriginCoords(targetGreen);
             const newShot = {
                 id: Date.now(),
                 course: activeCourse,
@@ -1167,6 +1422,8 @@
                 isOverride: true,
                 greenLat: targetGreen.lat,
                 greenLon: targetGreen.lon,
+                shotLat: origin.lat,
+                shotLon: origin.lon,
                 timestamp: new Date().toISOString()
             };
 
@@ -1216,6 +1473,10 @@
             updateUI();
             recalculateDistance(true);
             showToast(`Hole Completed! Moving to Hole ${currentHole}`);
+            
+            // Minimize stroke card on finish hole
+            const expanded = document.getElementById('strokeCardExpanded');
+            if (expanded) expanded.classList.add('hidden');
         }
 
         function clearManualOverride() {
@@ -1265,6 +1526,7 @@
                 }
             }
             
+            const origin = getShotOriginCoords(targetGreen);
             const newShot = {
                 id: Date.now(),
                 course: activeCourse,
@@ -1275,6 +1537,8 @@
                 isOverride: isManualMode,
                 greenLat: targetGreen.lat,
                 greenLon: targetGreen.lon,
+                shotLat: origin.lat,
+                shotLon: origin.lon,
                 timestamp: new Date().toISOString()
             };
 
@@ -1984,9 +2248,14 @@
 
         async function syncActiveCourseWithOSM() {
             const btn = document.getElementById('btnSyncOSM');
+            const btnSettings = document.getElementById('btnSyncOSMSettings');
             if (btn) {
                 btn.innerText = "Syncing...";
                 btn.disabled = true;
+            }
+            if (btnSettings) {
+                btnSettings.innerText = "Syncing...";
+                btnSettings.disabled = true;
             }
             try {
                 await fetchAndUpgradeMathematicalCourse(activeCourse, true);
@@ -1997,6 +2266,10 @@
                 if (btn) {
                     btn.innerText = "Sync with OSM";
                     btn.disabled = false;
+                }
+                if (btnSettings) {
+                    btnSettings.innerText = "Sync with OSM";
+                    btnSettings.disabled = false;
                 }
             }
         }
@@ -2016,6 +2289,10 @@
                 updateTeeColorDropdown();
                 populateCourseSelectDropdown();
                 renderHolesEditorInputs();
+                if (typeof populateCourseSelectDropdownSettings === 'function') {
+                    populateCourseSelectDropdownSettings();
+                    renderHolesEditorInputsSettings();
+                }
                 
                 showToast("Course deleted");
                 currentHole = 1;
@@ -2099,6 +2376,7 @@
             isCaptureMode = true;
             captureHoleNum = holeNum;
             captureTarget = type;
+            captureSourceView = currentView;
             
             currentHole = holeNum;
             updateUI();
@@ -2111,12 +2389,22 @@
             
             updateCaptureBannerUI();
             closeCourseModal();
+            
+            const settingsOverlay = document.getElementById('settings-screen');
+            if (settingsOverlay) settingsOverlay.classList.add('hidden');
+            
+            // Go to map view to let them tap
+            setView(captureSourceView === 'settings' ? 'play' : captureSourceView);
+            
             showToast(`Tap Map: Set ${type === 'green' ? 'Green' : 'Tee'} for Hole ${holeNum}`);
         }
 
         function disableCaptureMode() {
             isCaptureMode = false;
             updateCaptureBannerUI();
+            if (captureSourceView === 'settings') {
+                setView('settings');
+            }
         }
 
         function captureCoordinateFromMap(lat, lon) {
@@ -2154,6 +2442,9 @@
                 } else {
                     disableCaptureMode();
                     showToast(`Finished mapping all ${maxHoles} holes!`);
+                    if (captureSourceView === 'settings') {
+                        setView('settings');
+                    }
                 }
             }
             recalculateDistance(true);
@@ -2396,7 +2687,7 @@
             isUIVisible = !isUIVisible;
             
             const header = document.querySelector('header');
-            const bottomCard = document.getElementById('bottomControlCard');
+            const strokeTracker = document.getElementById('strokeTrackerCard');
             const refreshGps = document.getElementById('refreshGpsContainer');
             const topBadges = document.getElementById('topBadges');
             
@@ -2404,9 +2695,9 @@
                 if (isUIVisible) header.classList.remove('hidden');
                 else header.classList.add('hidden');
             }
-            if (bottomCard) {
-                if (isUIVisible) bottomCard.classList.remove('hidden');
-                else bottomCard.classList.add('hidden');
+            if (strokeTracker) {
+                if (isUIVisible) strokeTracker.classList.remove('hidden');
+                else strokeTracker.classList.add('hidden');
             }
             if (refreshGps) {
                 if (isUIVisible) refreshGps.classList.remove('hidden');
@@ -2418,6 +2709,23 @@
             }
             
             showToast(isUIVisible ? "HUD Restored" : "HUD Hidden (Hold map to restore)");
+        }
+
+        function toggleStrokeCard(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const expanded = document.getElementById('strokeCardExpanded');
+            if (!expanded) return;
+            const isHidden = expanded.classList.contains('hidden');
+            if (isHidden) {
+                expanded.classList.remove('hidden');
+                const expHoleDisp = document.getElementById('expandedHoleDisplay');
+                if (expHoleDisp) expHoleDisp.innerText = `H${currentHole} S${currentShot}`;
+            } else {
+                expanded.classList.add('hidden');
+            }
         }
 
         // 10. Shot History Log rendering
@@ -2600,6 +2908,13 @@
             if (courseDisplay) courseDisplay.innerText = activeCourse;
             if (shotDisplay) shotDisplay.innerText = currentShot;
 
+            // Sync collapsible stroke tracker card states
+            const strokeCardShotDisplay = document.getElementById('strokeCardShotDisplay');
+            if (strokeCardShotDisplay) strokeCardShotDisplay.innerText = currentShot;
+            
+            const expHoleDisp = document.getElementById('expandedHoleDisplay');
+            if (expHoleDisp) expHoleDisp.innerText = `H${currentHole} S${currentShot}`;
+
             if (enterShotBtn) {
                 if (currentShot === 1) {
                     enterShotBtn.innerText = "Hole Start";
@@ -2633,6 +2948,542 @@
         function toggleGpsEditorSection() {
             const section = document.getElementById('gpsEditorSection');
             const arrow = document.getElementById('editorArrow');
+            if (!section || !arrow) return;
+            
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                arrow.classList.add('rotate-180');
+            } else {
+                section.classList.add('hidden');
+                arrow.classList.remove('rotate-180');
+            }
+        }
+
+        // ==============================================
+        // NEW DASHBOARD VIEW SWITCHING & STATS LOGIC
+        // ==============================================
+
+        function getShotOriginCoords(targetGreen) {
+            if (currentShot === 1) {
+                if (userLocation) {
+                    const teeLat = targetGreen.teeLat || (targetGreen.lat - 0.0012);
+                    const teeLon = targetGreen.teeLon || targetGreen.lon;
+                    const distFromTee = calculateDistanceYards(userLocation.lat, userLocation.lon, teeLat, teeLon);
+                    if (distFromTee <= 650) {
+                        return { lat: userLocation.lat, lon: userLocation.lon };
+                    }
+                }
+                return { lat: targetGreen.teeLat, lon: targetGreen.teeLon };
+            } else {
+                if (userLocation) {
+                    return { lat: userLocation.lat, lon: userLocation.lon };
+                }
+                return { lat: null, lon: null };
+            }
+        }
+
+        function setView(viewName) {
+            currentView = viewName;
+            
+            // Hide screen overlays
+            document.getElementById('home-screen').classList.add('hidden');
+            document.getElementById('settings-screen').classList.add('hidden');
+            
+            const header = document.querySelector('header');
+            const shotDisp = document.getElementById('shotDisplayContainer');
+            const strokeTracker = document.getElementById('strokeTrackerCard');
+            const topBadges = document.getElementById('topBadges');
+            const refreshGps = document.getElementById('refreshGpsContainer');
+            
+            if (viewName === 'home') {
+                document.getElementById('home-screen').classList.remove('hidden');
+                loadLastRound();
+                updatePlayTileStatus();
+                if (header) header.classList.add('hidden');
+                if (strokeTracker) strokeTracker.classList.add('hidden');
+                if (topBadges) topBadges.classList.add('hidden');
+                if (refreshGps) refreshGps.classList.add('hidden');
+            } else if (viewName === 'settings') {
+                document.getElementById('settings-screen').classList.remove('hidden');
+                populateSettingsSelects();
+                if (header) header.classList.add('hidden');
+                if (strokeTracker) strokeTracker.classList.add('hidden');
+                if (topBadges) topBadges.classList.add('hidden');
+                if (refreshGps) refreshGps.classList.add('hidden');
+            } else if (viewName === 'play') {
+                if (header) header.classList.remove('hidden');
+                if (shotDisp) shotDisp.classList.remove('hidden');
+                if (strokeTracker) strokeTracker.classList.remove('hidden');
+                if (topBadges) topBadges.classList.remove('hidden');
+                if (refreshGps) refreshGps.classList.remove('hidden');
+                
+                updateUI();
+                recalculateDistance(true);
+            } else if (viewName === 'analyze') {
+                if (header) header.classList.remove('hidden');
+                if (shotDisp) shotDisp.classList.add('hidden');
+                if (strokeTracker) strokeTracker.classList.add('hidden');
+                if (topBadges) topBadges.classList.remove('hidden');
+                if (refreshGps) refreshGps.classList.remove('hidden');
+                
+                updateUI();
+                recalculateDistance(true);
+            }
+        }
+
+        function updatePlayTileStatus() {
+            const statusLabel = document.getElementById('play-tile-status');
+            if (!statusLabel) return;
+
+            const shots = getShotsFromStorage();
+            const activeCourseShots = shots.filter(s => s && s.course === activeCourse);
+
+            if (activeCourseShots.length > 0) {
+                const maxHole = Math.max(...activeCourseShots.map(s => s.hole));
+                const currentHoleShots = activeCourseShots.filter(s => s.hole === maxHole);
+                const nextShotNum = currentHoleShots.length + 1;
+                statusLabel.innerText = `Resume (Hole ${maxHole} Shot ${nextShotNum})`;
+                statusLabel.classList.add('text-emerald-400');
+                statusLabel.classList.remove('text-slate-500');
+            } else {
+                statusLabel.innerText = "Start New Round";
+                statusLabel.classList.remove('text-emerald-400');
+                statusLabel.classList.add('text-slate-500');
+            }
+        }
+
+        function loadLastRound() {
+            const statusLabel = document.getElementById('last-round-tile-status');
+            if (!statusLabel) return;
+
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            if (savedRounds.length > 0) {
+                const last = savedRounds[savedRounds.length - 1];
+                const dateStr = new Date(last.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                statusLabel.innerText = `${last.courseName} (${dateStr}) // ${last.totalStrokes} Shots`;
+                statusLabel.classList.add('text-emerald-400');
+                statusLabel.classList.remove('text-slate-500');
+            } else {
+                statusLabel.innerText = "No saved rounds yet";
+                statusLabel.classList.remove('text-emerald-400');
+                statusLabel.classList.add('text-slate-500');
+            }
+        }
+
+        function saveActiveRound() {
+            const shots = getShotsFromStorage();
+            const activeCourseShots = shots.filter(s => s && s.course === activeCourse);
+
+            if (activeCourseShots.length === 0) {
+                showToast("No shots logged to save!");
+                return;
+            }
+
+            if (!confirm("Are you sure you want to save this round and finish play? This will clear active shots.")) {
+                return;
+            }
+
+            const savedRound = {
+                id: Date.now(),
+                courseName: activeCourse,
+                date: new Date().toISOString(),
+                shots: activeCourseShots,
+                totalStrokes: activeCourseShots.length,
+                holeCount: new Set(activeCourseShots.map(s => s.hole)).size
+            };
+
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            savedRounds.push(savedRound);
+            localStorage.setItem('caddyshot_saved_rounds_v1', JSON.stringify(savedRounds));
+
+            // Clear active shots for this course
+            const remainingShots = shots.filter(s => s && s.course !== activeCourse);
+            saveShotsToStorage(remainingShots);
+
+            // Reset active play state
+            currentHole = 1;
+            currentShot = 1;
+            selectLie('Tee');
+            clearManualOverride();
+            clearLayupPoint();
+
+            const courseModal = document.getElementById('courseModal');
+            if (courseModal) courseModal.classList.add('hidden');
+
+            showToast("Round saved successfully!");
+            
+            updateUI();
+            renderShotLog();
+            recalculateDistance(true);
+            setView('home');
+        }
+
+        function viewLastRoundDetails() {
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            if (savedRounds.length === 0) {
+                showToast("No saved rounds to view!");
+                return;
+            }
+
+            const last = savedRounds[savedRounds.length - 1];
+            
+            document.getElementById('lastRoundCourse').innerText = last.courseName;
+            document.getElementById('lastRoundStrokes').innerText = `${last.totalStrokes} Shots`;
+            document.getElementById('lastRoundDate').innerText = new Date(last.date).toLocaleDateString([], {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+
+            const container = document.getElementById('lastRoundDetailsContainer');
+            if (container) {
+                const shotsByHole = {};
+                last.shots.forEach(s => {
+                    if (!shotsByHole[s.hole]) shotsByHole[s.hole] = [];
+                    shotsByHole[s.hole].push(s);
+                });
+
+                container.innerHTML = Object.keys(shotsByHole).map(hNum => {
+                    const holeShots = shotsByHole[hNum].sort((a, b) => a.shot - b.shot);
+                    const totalDist = holeShots.reduce((sum, s) => sum + s.distance, 0);
+                    return `
+                        <div class="p-3 bg-slate-950/40 rounded-xl border border-slate-800/80 space-y-2">
+                            <div class="flex justify-between items-center text-xs font-extrabold uppercase text-slate-400 border-b border-slate-800/40 pb-1.5">
+                                <span class="text-emerald-400">Hole ${hNum}</span>
+                                <span>${holeShots.length} Shots // ${totalDist} YDS</span>
+                            </div>
+                            <div class="space-y-1">
+                                ${holeShots.map(s => `
+                                    <div class="flex justify-between text-[10.5px] text-slate-300">
+                                        <span>Shot ${s.shot} (${s.lie})</span>
+                                        <span class="font-bold text-emerald-400">${s.distance} YDS</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('last-round-modal').classList.remove('hidden');
+        }
+
+        function closeLastRoundModal() {
+            document.getElementById('last-round-modal').classList.add('hidden');
+        }
+
+        function exportLastRoundCSV() {
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            if (savedRounds.length === 0) {
+                showToast("No rounds to export");
+                return;
+            }
+
+            const last = savedRounds[savedRounds.length - 1];
+            let csv = "Hole,Shot,Lie,Distance (Yds),Manual Override,Shot Latitude,Shot Longitude,Green Latitude,Green Longitude,Timestamp\n";
+            last.shots.forEach(s => {
+                if (s) {
+                    csv += `${s.hole},${s.shot},"${s.lie}",${s.distance},${s.isOverride ? 'Yes' : 'No'},${s.shotLat || ''},${s.shotLon || ''},${s.greenLat},${s.greenLon},"${s.timestamp}"\n`;
+                }
+            });
+
+            try {
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                const filename = `${last.courseName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_saved_round_${last.id}.csv`;
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showToast("CSV Downloaded!");
+            } catch (err) {
+                console.error("Export Error:", err);
+                showToast("Export failed.");
+            }
+        }
+
+        function changeSatelliteTileSource(newSource) {
+            if (!map) return;
+            const tileUrls = {
+                'google-satellite': 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+                'google-hybrid': 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                'esri': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                'eox': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg'
+            };
+            const tileUrl = tileUrls[newSource] || tileUrls['google-satellite'];
+            const sourceMaxZoom = newSource.startsWith('google') ? 22 : 19;
+
+            try {
+                if (map.getLayer('satellite-layer')) {
+                    map.removeLayer('satellite-layer');
+                }
+                if (map.getSource('satellite-tiles')) {
+                    map.removeSource('satellite-tiles');
+                }
+
+                map.addSource('satellite-tiles', {
+                    type: 'raster',
+                    tiles: [tileUrl],
+                    tileSize: 256,
+                    maxzoom: sourceMaxZoom
+                });
+
+                map.addLayer({
+                    id: 'satellite-layer',
+                    type: 'raster',
+                    source: 'satellite-tiles',
+                    minzoom: 0,
+                    maxzoom: 22
+                }, map.getLayer('route-line') ? 'route-line' : undefined);
+            } catch (err) {
+                console.error("Error updating map source:", err);
+                throw err;
+            }
+        }
+
+        // ==============================================
+        // SETTINGS SCREEN OVERLAY WORKFLOW WRAPPERS
+        // ==============================================
+
+        function populateSettingsSelects() {
+            populateCourseSelectDropdownSettings();
+            renderHolesEditorInputsSettings();
+            
+            const mapSelect = document.getElementById('mapSourceSelectSettings');
+            if (mapSelect) {
+                mapSelect.value = localStorage.getItem('caddyshot_map_source') || 'google-satellite';
+            }
+        }
+
+        function populateCourseSelectDropdownSettings() {
+            const select = document.getElementById('courseSelectSettings');
+            if (select) {
+                select.innerHTML = Object.keys(courses).map(key => `
+                    <option value="${key}" ${key === activeCourse ? 'selected' : ''}>${courses[key].name}</option>
+                `).join('');
+            }
+        }
+
+        function onCourseSelectChangeSettings() {
+            const select = document.getElementById('courseSelectSettings');
+            if (!select) return;
+            activeCourse = select.value;
+            localStorage.setItem('caddyshot_active_course', activeCourse);
+            
+            updateTeeColorDropdown();
+            renderHolesEditorInputsSettings();
+            
+            currentHole = 1;
+            currentShot = 1;
+            
+            tempTeeLoc = null;
+            tempGreenLoc = null;
+            clearLayupPoint();
+            
+            updateUI();
+            recalculateDistance(true);
+
+            if (courses[activeCourse] && courses[activeCourse].isMathematical) {
+                fetchAndUpgradeMathematicalCourse(activeCourse);
+            }
+        }
+
+        function onMapSourceChangeSettings() {
+            const select = document.getElementById('mapSourceSelectSettings');
+            if (!select) return;
+            const newSource = select.value;
+            localStorage.setItem('caddyshot_map_source', newSource);
+            try {
+                changeSatelliteTileSource(newSource);
+                showToast(`Map updated to ${select.options[select.selectedIndex].text}`);
+            } catch (e) {
+                showToast("Failed to update map style.");
+            }
+        }
+
+        async function createNewCourseSettings() {
+            const input = document.getElementById('newCourseNameSettings');
+            const name = input.value.trim();
+            if (!name) {
+                showToast("Please enter a course name");
+                return;
+            }
+            const origInput = document.getElementById('newCourseName');
+            if (origInput) origInput.value = name;
+            
+            const settingsBtn = document.getElementById('btnCreateCourseSettings');
+            if (settingsBtn) {
+                settingsBtn.innerText = "Searching...";
+                settingsBtn.disabled = true;
+            }
+            
+            try {
+                await createNewCourse();
+                input.value = '';
+                populateSettingsSelects();
+            } finally {
+                if (settingsBtn) {
+                    settingsBtn.innerText = "Import OSM";
+                    settingsBtn.disabled = false;
+                }
+            }
+        }
+
+        function addCourseManuallySettings() {
+            const input = document.getElementById('newCourseNameSettings');
+            const name = input.value.trim();
+            if (!name) {
+                showToast("Please enter a course name");
+                return;
+            }
+            const origInput = document.getElementById('newCourseName');
+            if (origInput) origInput.value = name;
+            addCourseManually();
+            input.value = '';
+            populateSettingsSelects();
+        }
+
+        function saveCourseSettingsSettings() {
+            try {
+                courses[activeCourse].isManuallyModified = true;
+                const maxHoles = Object.keys(courses[activeCourse].holes).length;
+                for (let i = 1; i <= maxHoles; i++) {
+                    const latInput = document.getElementById(`lat-input-settings-${i}`);
+                    const lonInput = document.getElementById(`lon-input-settings-${i}`);
+                    const teeLatInput = document.getElementById(`tee-lat-input-settings-${i}`);
+                    const teeLonInput = document.getElementById(`tee-lon-input-settings-${i}`);
+
+                    if (!latInput) continue;
+
+                    const latVal = parseFloat(latInput.value);
+                    const lonVal = parseFloat(lonInput.value);
+                    const teeLatVal = parseFloat(teeLatInput.value);
+                    const teeLonVal = parseFloat(teeLonInput.value);
+                    
+                    if (!isNaN(latVal) && !isNaN(lonVal)) {
+                        courses[activeCourse].holes[i].lat = latVal;
+                        courses[activeCourse].holes[i].lon = lonVal;
+                    }
+                    if (!isNaN(teeLatVal) && !isNaN(teeLonVal)) {
+                        courses[activeCourse].holes[i].teeLat = teeLatVal;
+                        courses[activeCourse].holes[i].teeLon = teeLonVal;
+                        
+                        if (courses[activeCourse].holes[i].tees) {
+                            const defaultTeeKey = Object.keys(courses[activeCourse].holes[i].tees)[0] || "Standard";
+                            if (courses[activeCourse].holes[i].tees[defaultTeeKey]) {
+                                courses[activeCourse].holes[i].tees[defaultTeeKey].lat = teeLatVal;
+                                courses[activeCourse].holes[i].tees[defaultTeeKey].lon = teeLonVal;
+                            }
+                        }
+                    }
+                }
+                saveCoursesToStorage();
+                recalculateDistance(true);
+            } catch (e) {
+                console.error("Save course coordinates error (settings overlay):", e);
+            }
+        }
+
+        function renderHolesEditorInputsSettings() {
+            const container = document.getElementById('holesInputsContainerSettings');
+            if (!container) return;
+            const holes = courses[activeCourse].holes;
+            const maxHoles = Object.keys(holes).length;
+
+            let html = '';
+            for (let i = 1; i <= maxHoles; i++) {
+                const h = holes[i] || { lat: 36.568600, lon: -121.948200, teeLat: 36.566800, teeLon: -121.948400 };
+                html += `
+                    <div class="py-2.5 px-3 bg-slate-950/40 rounded-xl border border-slate-800 space-y-2">
+                        <div class="flex items-center justify-between text-[11px] font-extrabold uppercase text-slate-400">
+                            <span>Hole ${i}</span>
+                            <div class="flex gap-2">
+                                <button onclick="useCurrentCoordsForHoleSettings(${i}, 'green')" class="text-emerald-400 hover:underline">📍 Set Green Here</button>
+                                <button onclick="useCurrentCoordsForHoleSettings(${i}, 'tee')" class="text-slate-300 hover:underline">📍 Set Tee Here</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[10px]">
+                            <div class="bg-slate-900 border border-slate-855 p-2 rounded flex flex-col gap-1">
+                                <span class="text-slate-300 font-bold uppercase text-[9px] flex items-center justify-between">
+                                    Tee Box
+                                    <button onclick="enableCaptureMode(${i}, 'tee')" class="text-amber-400 hover:underline font-bold text-[8.5px]">🎯 Map</button>
+                                </span>
+                                <div class="flex flex-col gap-1 mt-1">
+                                    <input type="number" step="any" id="tee-lat-input-settings-${i}" value="${(h.teeLat || h.lat - 0.0012).toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                    <input type="number" step="any" id="tee-lon-input-settings-${i}" value="${(h.teeLon || h.lon).toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                </div>
+                            </div>
+                            <div class="bg-slate-900 border border-slate-855 p-2 rounded flex flex-col gap-1">
+                                <span class="text-emerald-400 font-bold uppercase text-[9px] flex items-center justify-between">
+                                    Green Center
+                                    <button onclick="enableCaptureMode(${i}, 'green')" class="text-amber-400 hover:underline font-bold text-[8.5px]">🎯 Map</button>
+                                </span>
+                                <div class="flex flex-col gap-1 mt-1">
+                                    <input type="number" step="any" id="lat-input-settings-${i}" value="${h.lat.toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                    <input type="number" step="any" id="lon-input-settings-${i}" value="${h.lon.toFixed(6)}" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-slate-100">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function useCurrentCoordsForHoleSettings(holeNum, targetType) {
+            if (!userLocation) {
+                alert("GPS coordinates not acquired yet. Please wait for a signal or use simulator.");
+                return;
+            }
+            
+            if (targetType === 'green') {
+                const latEl = document.getElementById(`lat-input-settings-${holeNum}`);
+                const lonEl = document.getElementById(`lon-input-settings-${holeNum}`);
+                if (latEl) latEl.value = userLocation.lat.toFixed(6);
+                if (lonEl) lonEl.value = userLocation.lon.toFixed(6);
+                showToast(`Hole ${holeNum} Green set to current location`);
+            } else {
+                const latEl = document.getElementById(`tee-lat-input-settings-${holeNum}`);
+                const lonEl = document.getElementById(`tee-lon-input-settings-${holeNum}`);
+                if (latEl) latEl.value = userLocation.lat.toFixed(6);
+                if (lonEl) lonEl.value = userLocation.lon.toFixed(6);
+                showToast(`Hole ${holeNum} Tee set to current location`);
+            }
+        }
+
+        function toggleGpsEditorSectionSettings() {
+            const section = document.getElementById('gpsEditorSectionSettings');
+            const arrow = document.getElementById('editorArrowSettings');
             if (!section || !arrow) return;
             
             if (section.classList.contains('hidden')) {
