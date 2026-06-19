@@ -102,10 +102,13 @@
                 </button>
             </div>
 
-            <!-- Logo & Course Name -->
+            <!-- Logo & Course Name & Tee Color Selector -->
             <div class="flex flex-col items-center">
                 <span class="text-[10px] font-black tracking-widest text-slate-400">CADDY<span class="text-emerald-500">SHOT</span></span>
-                <span id="courseNameDisplay" class="text-[9px] text-emerald-400/80 font-bold uppercase tracking-wider max-w-[120px] truncate text-center mt-0.5">Pebble Beach</span>
+                <span id="courseNameDisplay" class="text-[9px] text-emerald-400/80 font-bold uppercase tracking-wider max-w-[120px] truncate text-center mt-0.5">Innerkip Highlands</span>
+                <select id="teeColorSelect" onchange="onTeeColorChange()" class="mt-0.5 bg-slate-950/80 border border-slate-800/80 text-[8.5px] text-slate-300 rounded px-1.5 py-0.5 font-bold focus:outline-none focus:border-emerald-500">
+                    <option value="Standard">Standard</option>
+                </select>
             </div>
 
             <!-- Shot Display & Settings Trigger -->
@@ -205,6 +208,11 @@
                 <!-- Main Shot Complete Button (4/5 width) -->
                 <button onclick="submitShot()" id="enterShotBtn" class="flex-[4] bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all">
                     Shot Complete
+                </button>
+
+                <!-- Finish Hole Button -->
+                <button onclick="finishHole()" id="finishHoleBtn" class="hidden bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest transition-all active:scale-95">
+                    Finish Hole
                 </button>
 
                 <!-- Manual Keypad Trigger Button (1/5 width, icon only) -->
@@ -339,11 +347,16 @@
 
                         <div class="border-t border-slate-800/40 my-2 pt-2">
                             <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1">Create New Course</label>
-                            <div class="flex gap-2">
-                                <input type="text" id="newCourseName" placeholder="Course Name (e.g. Oakmont CC)" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg py-1.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
-                                <button onclick="createNewCourse()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition-all active:scale-95">
-                                    Add
-                                </button>
+                            <div class="flex flex-col gap-2">
+                                <input type="text" id="newCourseName" placeholder="Course Name (e.g. Oakmont CC)" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-1.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <div class="flex gap-2">
+                                    <button onclick="createNewCourse()" id="btnCreateCourse" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all active:scale-95">
+                                        Import API
+                                    </button>
+                                    <button onclick="addCourseManually()" class="flex-1 bg-slate-950/60 border border-slate-800 hover:bg-slate-900 text-slate-300 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all active:scale-95">
+                                        Create Manual
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -409,39 +422,68 @@
             });
         }
 
-        // DEFAULT 18-HOLE DEMO DATABASE (Pebble Beach Golf Links green and tee positions)
-        const DEFAULT_COURSES = {
-            "Pebble Beach": {
-                name: "Pebble Beach Golf Links",
-                holes: {
-                    1: { name: "Hole 1", lat: 36.568600, lon: -121.948200, teeLat: 36.566800, teeLon: -121.948400 },
-                    2: { name: "Hole 2", lat: 36.570500, lon: -121.951500, teeLat: 36.568700, teeLon: -121.949500 },
-                    3: { name: "Hole 3", lat: 36.569500, lon: -121.953500, teeLat: 36.570800, teeLon: -121.952000 },
-                    4: { name: "Hole 4", lat: 36.568100, lon: -121.956500, teeLat: 36.569500, teeLon: -121.954500 },
-                    5: { name: "Hole 5", lat: 36.568000, lon: -121.958500, teeLat: 36.568000, teeLon: -121.956800 },
-                    6: { name: "Hole 6", lat: 36.566500, lon: -121.959500, teeLat: 36.567800, teeLon: -121.959000 },
-                    7: { name: "Hole 7", lat: 36.564500, lon: -121.959800, teeLat: 36.566200, teeLon: -121.959600 },
-                    8: { name: "Hole 8", lat: 36.564100, lon: -121.956000, teeLat: 36.564400, teeLon: -121.959000 },
-                    9: { name: "Hole 9", lat: 36.563000, lon: -121.951000, teeLat: 36.564000, teeLon: -121.955500 },
-                    10: { name: "Hole 10", lat: 36.561500, lon: -121.947000, teeLat: 36.562800, teeLon: -121.950500 },
-                    11: { name: "Hole 11", lat: 36.563500, lon: -121.944000, teeLat: 36.561200, teeLon: -121.947000 },
-                    12: { name: "Hole 12", lat: 36.565200, lon: -121.944200, teeLat: 36.563600, teeLon: -121.944000 },
-                    13: { name: "Hole 13", lat: 36.567000, lon: -121.944800, teeLat: 36.565100, teeLon: -121.944200 },
-                    14: { name: "Hole 14", lat: 36.569500, lon: -121.943000, teeLat: 36.567100, teeLon: -121.944800 },
-                    15: { name: "Hole 15", lat: 36.571000, lon: -121.944000, teeLat: 36.569600, teeLon: -121.943100 },
-                    16: { name: "Hole 16", lat: 36.570800, lon: -121.947000, teeLat: 36.571100, teeLon: -121.944100 },
-                    17: { name: "Hole 17", lat: 36.569500, lon: -121.949000, teeLat: 36.570700, teeLon: -121.947200 },
-                    18: { name: "Hole 18", lat: 36.568300, lon: -121.951000, teeLat: 36.569400, teeLon: -121.949200 }
-                }
-            }
+        // DEFAULT COURSE DATABASE GENERATOR (Hardcoded Ontario courses, Pebble Beach removed)
+        const COURSE_CENTERS = {
+            "Innerkip Highlands": { lat: 43.21521, lon: -80.68751, holes: 18 },
+            "DragonsFire": { lat: 43.37680, lon: -79.99610, holes: 18 },
+            "Mt. Nemo": { lat: 43.42886, lon: -79.87140, holes: 18 },
+            "Tarrandowah": { lat: 42.89771, lon: -80.93083, holes: 18 },
+            "Carlisle Golf and Country Club": { lat: 43.41336, lon: -79.96393, holes: 18 },
+            "Royal Niagara": { lat: 43.14850, lon: -79.17000, holes: 18 },
+            "Victoria Park East": { lat: 43.56790, lon: -80.19590, holes: 18 },
+            "Victoria Park Valley - Valley": { lat: 43.50672, lon: -80.14748, holes: 9 },
+            "Victoria Park Valley - Lakes": { lat: 43.50672, lon: -80.14748, holes: 9 },
+            "Victoria Park Valley - Pines": { lat: 43.50672, lon: -80.14748, holes: 9 }
         };
+
+        const DEFAULT_COURSES = {};
+        Object.keys(COURSE_CENTERS).forEach(name => {
+            const info = COURSE_CENTERS[name];
+            const holes = {};
+            const numHoles = info.holes;
+            const baseLat = info.lat;
+            const baseLon = info.lon;
+
+            for (let i = 1; i <= numHoles; i++) {
+                const angle = (i * 2 * Math.PI) / numHoles;
+                const distance = 0.0025 + (i * 0.0001); // spiral layout
+                const hLat = baseLat + Math.sin(angle) * distance;
+                const hLon = baseLon + Math.cos(angle) * distance;
+                
+                const teeLat = hLat - 0.0010 * Math.sin(angle);
+                const teeLon = hLon - 0.0010 * Math.cos(angle);
+
+                holes[i] = {
+                    name: `Hole ${i}`,
+                    lat: hLat,
+                    lon: hLon,
+                    tees: {
+                        "Blue": { name: "Blue", lat: teeLat + 0.00008, lon: teeLon + 0.00008, yardage: 380, slope: 120, rating: 70 },
+                        "White": { name: "White", lat: teeLat, lon: teeLon, yardage: 350, slope: 115, rating: 68 },
+                        "Red": { name: "Red", lat: teeLat - 0.00008, lon: teeLon - 0.00008, yardage: 315, slope: 110, rating: 66 }
+                    },
+                    teeLat: teeLat,
+                    teeLon: teeLon
+                };
+            }
+
+            DEFAULT_COURSES[name] = {
+                name: name,
+                holes: holes
+            };
+        });
 
         // Application State
         let courses = {};
-        let activeCourse = "Pebble Beach";
+        let activeCourse = "Innerkip Highlands";
         let currentHole = 1;
         let currentShot = 1;
         let selectedLie = 'Tee';
+        let activeTeeColor = "White";
+
+        // Temporary overrides for dragging
+        let tempTeeLoc = null;   // { lat, lon }
+        let tempGreenLoc = null;  // { lat, lon }
 
         // Manual override state
         let manualOverrideValue = '';
@@ -458,6 +500,7 @@
         let userMarkerAdded = false;
         let greenMarker = null;
         let teeMarker = null;
+        let isDraggingMarker = false; // canonical declaration — second let below (line ~1752) is removed
 
         // Click Coordinate Capture Mode state
         let isCaptureMode = false;
@@ -481,10 +524,23 @@
         // Load data on page launch
         window.addEventListener('DOMContentLoaded', () => {
             loadCoursesFromStorage();
+            
+            // Load persistent tee color
+            const savedTee = localStorage.getItem('caddyshot_active_tee_color');
+            if (savedTee) {
+                activeTeeColor = savedTee;
+            } else {
+                activeTeeColor = "Standard";
+            }
+
             loadRoundState();
             initMapLibre();
             setupGeolocation();
             setupLongPressHUDToggle();
+            
+            // Populate and update tee dropdown selector
+            updateTeeColorDropdown();
+            
             selectLie('Tee');
             renderShotLog();
         });
@@ -538,6 +594,7 @@
                 greenMarker = new maplibregl.Marker({ element: greenEl })
                     .setLngLat([targetGreen.lon, targetGreen.lat])
                     .addTo(map);
+                makeMarkerDraggable(greenMarker, 'green');
 
                 // Tee box element
                 const teeEl = document.createElement('div');
@@ -552,6 +609,7 @@
                 teeMarker = new maplibregl.Marker({ element: teeEl })
                     .setLngLat([teeLon, teeLat])
                     .addTo(map);
+                makeMarkerDraggable(teeMarker, 'tee');
 
                 // User location element
                 const userEl = document.createElement('div');
@@ -602,18 +660,52 @@
                             }
                         });
 
+                        // Invisible thick line for easy tapping
+                        map.addLayer({
+                            'id': 'route-line-tap',
+                            'type': 'line',
+                            'source': 'route',
+                            'layout': {
+                                'line-join': 'round',
+                                'line-cap': 'round'
+                            },
+                            'paint': {
+                                'line-color': '#000000',
+                                'line-width': 24,
+                                'line-opacity': 0
+                            }
+                        });
+
+                        map.on('click', 'route-line-tap', (e) => {
+                            if (isCaptureMode) return;
+                            if (e.originalEvent) {
+                                e.originalEvent._lineClicked = true;
+                            }
+                            setLayupPoint(e.lngLat.lat, e.lngLat.lng);
+                        });
+
+                        map.on('mouseenter', 'route-line-tap', () => {
+                            if (!isCaptureMode) map.getCanvas().style.cursor = 'pointer';
+                        });
+
+                        map.on('mouseleave', 'route-line-tap', () => {
+                            if (!isCaptureMode) map.getCanvas().style.cursor = '';
+                        });
+
                         recalculateDistance(true);
                     } catch(err) {
                         console.error("Map Source Load Error:", err);
                     }
                 });
 
-                // Map click listener for coordinate captures & layup points
+                // Map click listener for coordinate captures
                 map.on('click', (e) => {
                     if (isCaptureMode) {
                         captureCoordinateFromMap(e.lngLat.lat, e.lngLat.lng);
+                    } else if (e.originalEvent && e.originalEvent._lineClicked) {
+                        // Handled by route-line-tap click listener
                     } else {
-                        setLayupPoint(e.lngLat.lat, e.lngLat.lng);
+                        // Regular map click - do nothing, to prevent accidental layup placements
                     }
                 });
 
@@ -710,7 +802,8 @@
                     if (distEl) distEl.innerText = manualOverrideValue;
                 }
 
-                if (!map || !greenMarker || !teeMarker || !userMarker) return;
+                // userMarker may not yet be added to map (waiting for GPS) — only require map + markers
+                if (!map || !greenMarker || !teeMarker) return;
 
                 const greenLngLat = [targetGreen.lon, targetGreen.lat];
                 
@@ -723,9 +816,13 @@
                 greenMarker.setLngLat(greenLngLat);
                 teeMarker.setLngLat(teeLngLat);
 
-                // Compute hole orientation angle (Tee ➔ Green)
-                const holeBearing = calculateBearing(teeLat, teeLon, targetGreen.lat, targetGreen.lon);
-                map.setBearing(holeBearing); // Auto-orient Green UP, Tee DOWN
+                // Compute hole orientation angle (Tee ➔ Green).
+                // setBearing is skipped during drag (avoids fighting with user touch) and also
+                // skipped when fitBounds is about to run (fitBounds animates bearing itself).
+                if (!isDraggingMarker && !shouldFitBounds) {
+                    const holeBearing = calculateBearing(teeLat, teeLon, targetGreen.lat, targetGreen.lon);
+                    map.setBearing(holeBearing);
+                }
 
                 let userLngLat = null;
                 if (userLocation) {
@@ -740,18 +837,28 @@
                     }
 
                     userLngLat = [userLocation.lon, userLocation.lat];
-                    userMarker.setLngLat(userLngLat);
-                    if (!userMarkerAdded) {
-                        userMarker.addTo(map);
-                        userMarkerAdded = true;
+                    if (userMarker) {
+                        userMarker.setLngLat(userLngLat);
+                        if (!userMarkerAdded) {
+                            userMarker.addTo(map);
+                            userMarkerAdded = true;
+                        }
                     }
                 } else {
                     if (!isManualMode) {
                         const distEl = document.getElementById('distanceDisplay');
                         if (distEl) distEl.innerText = "---";
                     }
-                    userMarker.remove();
+                    // Only call remove() if the marker was actually added to the map
+                    if (userMarker && userMarkerAdded) {
+                        userMarker.remove();
+                        userMarkerAdded = false;
+                    }
                 }
+
+                const startLat = userLocation ? userLocation.lat : teeLat;
+                const startLon = userLocation ? userLocation.lon : teeLon;
+                const startLngLat = userLngLat ? userLngLat : teeLngLat;
 
                 // Update Map visual lines
                 const source = map.getSource('route');
@@ -759,13 +866,13 @@
                     let lineCoords = [];
                     if (layupPoint) {
                         lineCoords = [
-                            teeLngLat,
+                            startLngLat,
                             [layupPoint.lon, layupPoint.lat],
                             greenLngLat
                         ];
                     } else {
                         lineCoords = [
-                            userLngLat ? userLngLat : teeLngLat,
+                            startLngLat,
                             greenLngLat
                         ];
                     }
@@ -781,13 +888,13 @@
                     });
                 }
 
-                // Draw/Update Midpoint labels if layup is active
+                // Draw/Update Midpoint labels
                 if (layupPoint) {
-                    const dist1 = calculateDistanceYards(teeLat, teeLon, layupPoint.lat, layupPoint.lon);
+                    const dist1 = calculateDistanceYards(startLat, startLon, layupPoint.lat, layupPoint.lon);
                     const dist2 = calculateDistanceYards(layupPoint.lat, layupPoint.lon, targetGreen.lat, targetGreen.lon);
 
-                    const midLat1 = (teeLat + layupPoint.lat) / 2;
-                    const midLon1 = (teeLon + layupPoint.lon) / 2;
+                    const midLat1 = (startLat + layupPoint.lat) / 2;
+                    const midLon1 = (startLon + layupPoint.lon) / 2;
                     const midLat2 = (layupPoint.lat + targetGreen.lat) / 2;
                     const midLon2 = (layupPoint.lon + targetGreen.lon) / 2;
 
@@ -815,13 +922,25 @@
                             .addTo(map);
                     }
                 } else {
-                    if (midpointMarker1) {
-                        midpointMarker1.remove();
-                        midpointMarker1 = null;
-                    }
+                    // No layup point: show direct distance on direct line
                     if (midpointMarker2) {
                         midpointMarker2.remove();
                         midpointMarker2 = null;
+                    }
+                    
+                    const distDirect = calculateDistanceYards(startLat, startLon, targetGreen.lat, targetGreen.lon);
+                    const midLatDirect = (startLat + targetGreen.lat) / 2;
+                    const midLonDirect = (startLon + targetGreen.lon) / 2;
+
+                    if (midpointMarker1) {
+                        midpointMarker1.setLngLat([midLonDirect, midLatDirect]);
+                        midpointMarker1.getElement().innerHTML = `<div class="bg-slate-950/80 border border-slate-800/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-black text-emerald-400 shadow shadow-slate-950/50">${distDirect} YDS</div>`;
+                    } else {
+                        const el = document.createElement('div');
+                        el.innerHTML = `<div class="bg-slate-950/80 border border-slate-800/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-black text-emerald-400 shadow shadow-slate-950/50">${distDirect} YDS</div>`;
+                        midpointMarker1 = new maplibregl.Marker({ element: el })
+                            .setLngLat([midLonDirect, midLatDirect])
+                            .addTo(map);
                     }
                 }
 
@@ -859,10 +978,17 @@
         // 4. Hole & Course Navigation
         function changeHole(delta) {
             try {
+                const maxHoles = courses[activeCourse] && courses[activeCourse].holes 
+                    ? Object.keys(courses[activeCourse].holes).length 
+                    : 18;
                 let nextHole = currentHole + delta;
-                if (nextHole < 1) nextHole = 18;
-                if (nextHole > 18) nextHole = 1;
+                if (nextHole < 1) nextHole = maxHoles;
+                if (nextHole > maxHoles) nextHole = 1;
                 currentHole = nextHole;
+
+                // Revert temporary overrides when changing holes
+                tempTeeLoc = null;
+                tempGreenLoc = null;
 
                 recalcShotCount();
 
@@ -892,15 +1018,41 @@
 
         function getActiveHoleCoords() {
             const courseData = courses[activeCourse];
+            let baseCoords = null;
             if (courseData && courseData.holes && courseData.holes[currentHole]) {
-                return courseData.holes[currentHole];
+                baseCoords = courseData.holes[currentHole];
+            } else {
+                // Safe coordinates fallback for Hole 4-18 if they don't exist in localstorage DB yet
+                const baseLat = 36.568600 + (currentHole * 0.0002);
+                const baseLon = -121.948200 + (currentHole * 0.0002);
+                baseCoords = { 
+                    lat: baseLat, 
+                    lon: baseLon,
+                    teeLat: baseLat - 0.0012,
+                    teeLon: baseLon
+                };
             }
-            // Safe coordinates fallback for Hole 4-18 if they don't exist in localstorage DB yet
-            return { 
-                lat: 36.568600 + (currentHole * 0.0002), 
-                lon: -121.948200 + (currentHole * 0.0002),
-                teeLat: 36.566800 + (currentHole * 0.0002),
-                teeLon: -121.948400 + (currentHole * 0.0002)
+
+            // Resolve tee coordinate from selection
+            let resolvedTeeLat = null;
+            let resolvedTeeLon = null;
+
+            if (tempTeeLoc) {
+                resolvedTeeLat = tempTeeLoc.lat;
+                resolvedTeeLon = tempTeeLoc.lon;
+            } else if (baseCoords.tees && baseCoords.tees[activeTeeColor]) {
+                resolvedTeeLat = baseCoords.tees[activeTeeColor].lat;
+                resolvedTeeLon = baseCoords.tees[activeTeeColor].lon;
+            } else {
+                resolvedTeeLat = baseCoords.teeLat || (baseCoords.lat - 0.0012);
+                resolvedTeeLon = baseCoords.teeLon || baseCoords.lon;
+            }
+
+            return {
+                lat: tempGreenLoc ? tempGreenLoc.lat : baseCoords.lat,
+                lon: tempGreenLoc ? tempGreenLoc.lon : baseCoords.lon,
+                teeLat: resolvedTeeLat,
+                teeLon: resolvedTeeLon
             };
         }
 
@@ -936,14 +1088,25 @@
         }
 
         function addManualShot() {
-            const displayVal = document.getElementById('modalKeypadValue').innerText;
-            if (displayVal === '---' || displayVal === '0' || displayVal === '') {
+            // Read from the authoritative data source, NOT the DOM. innerText can be
+            // whitespace-trimmed or stale if the browser batches reflows.
+            const displayVal = tempModalKeypadValue;
+            if (displayVal === '' || displayVal === '0') {
                 showToast("Please enter a distance first");
                 return;
             }
 
             const dist = parseInt(displayVal, 10);
             const targetGreen = getActiveHoleCoords();
+
+            // If it's the first shot (Hole Start), record the tee coordinates as the current user location (if GPS available)
+            if (currentShot === 1 && userLocation) {
+                if (courses[activeCourse] && courses[activeCourse].holes && courses[activeCourse].holes[currentHole]) {
+                    courses[activeCourse].holes[currentHole].teeLat = userLocation.lat;
+                    courses[activeCourse].holes[currentHole].teeLon = userLocation.lon;
+                    saveCoursesToStorage();
+                }
+            }
             
             const newShot = {
                 id: Date.now(),
@@ -985,10 +1148,17 @@
         function finishHole() {
             closeKeypadModal();
             clearManualOverride();
+            
+            // Revert temporary overrides when finishing hole
+            tempTeeLoc = null;
+            tempGreenLoc = null;
             clearLayupPoint();
             
+            const maxHoles = courses[activeCourse] && courses[activeCourse].holes 
+                ? Object.keys(courses[activeCourse].holes).length 
+                : 18;
             let nextHole = currentHole + 1;
-            if (nextHole > 18) nextHole = 1;
+            if (nextHole > maxHoles) nextHole = 1;
             
             currentHole = nextHole;
             currentShot = 1;
@@ -1031,6 +1201,15 @@
 
             const dist = parseInt(displayVal, 10);
             const targetGreen = getActiveHoleCoords();
+
+            // If it's the first shot (Hole Start), record the tee coordinates as the current user location (if GPS available)
+            if (currentShot === 1 && userLocation) {
+                if (courses[activeCourse] && courses[activeCourse].holes && courses[activeCourse].holes[currentHole]) {
+                    courses[activeCourse].holes[currentHole].teeLat = userLocation.lat;
+                    courses[activeCourse].holes[currentHole].teeLon = userLocation.lon;
+                    saveCoursesToStorage();
+                }
+            }
             
             const newShot = {
                 id: Date.now(),
@@ -1077,17 +1256,57 @@
         function loadCoursesFromStorage() {
             const raw = localStorage.getItem('caddyshot_courses_v2');
             if (raw) {
-                courses = JSON.parse(raw);
+                try {
+                    courses = JSON.parse(raw);
+                } catch (parseErr) {
+                    console.error('caddyshot_courses_v2 parse failed, resetting:', parseErr);
+                    localStorage.removeItem('caddyshot_courses_v2');
+                    courses = JSON.parse(JSON.stringify(DEFAULT_COURSES));
+                    localStorage.setItem('caddyshot_courses_v2', JSON.stringify(courses));
+                }
             } else {
                 courses = JSON.parse(JSON.stringify(DEFAULT_COURSES));
                 localStorage.setItem('caddyshot_courses_v2', JSON.stringify(courses));
             }
             
+            // Merge hardcoded default courses if missing from storage, and delete Pebble Beach
+            Object.keys(DEFAULT_COURSES).forEach(key => {
+                if (!courses[key]) {
+                    courses[key] = JSON.parse(JSON.stringify(DEFAULT_COURSES[key]));
+                }
+            });
+            if (courses["Pebble Beach"]) {
+                delete courses["Pebble Beach"];
+            }
+            saveCoursesToStorage();
+
+            // Upgrade courses to support multi-tee structure if missing
+            Object.keys(courses).forEach(cName => {
+                const c = courses[cName];
+                if (c && c.holes) {
+                    Object.keys(c.holes).forEach(hNum => {
+                        const hole = c.holes[hNum];
+                        if (hole && !hole.tees) {
+                            hole.tees = {
+                                "Standard": {
+                                    name: "Standard",
+                                    lat: hole.teeLat || (hole.lat - 0.0012),
+                                    lon: hole.teeLon || hole.lon,
+                                    yardage: 0,
+                                    slope: 0,
+                                    rating: 0
+                                }
+                            };
+                        }
+                    });
+                }
+            });
+            
             const savedActive = localStorage.getItem('caddyshot_active_course');
             if (savedActive && courses[savedActive]) {
                 activeCourse = savedActive;
             } else {
-                activeCourse = Object.keys(courses)[0] || "Pebble Beach";
+                activeCourse = Object.keys(courses)[0] || "Innerkip Highlands";
                 localStorage.setItem('caddyshot_active_course', activeCourse);
             }
         }
@@ -1123,10 +1342,19 @@
             activeCourse = select.value;
             localStorage.setItem('caddyshot_active_course', activeCourse);
             
+            // Populate tee colors dropdown for selected course
+            updateTeeColorDropdown();
+            
             renderHolesEditorInputs();
             
             currentHole = 1;
             currentShot = 1;
+            
+            // Revert temporary overrides when changing courses
+            tempTeeLoc = null;
+            tempGreenLoc = null;
+            clearLayupPoint();
+            
             updateUI();
             recalculateDistance(true);
         }
@@ -1141,7 +1369,50 @@
             document.getElementById('logModal').classList.add('hidden');
         }
 
-        function createNewCourse() {
+        // Global functions for Tee Box Selection
+        function updateTeeColorDropdown() {
+            const select = document.getElementById('teeColorSelect');
+            if (!select) return;
+
+            const courseData = courses[activeCourse];
+            if (!courseData || !courseData.holes) {
+                select.innerHTML = '<option value="Standard">Standard</option>';
+                return;
+            }
+
+            // Extract unique tee colors across all holes
+            const teeNamesSet = new Set();
+            Object.values(courseData.holes).forEach(hole => {
+                if (hole.tees) {
+                    Object.keys(hole.tees).forEach(name => teeNamesSet.add(name));
+                }
+            });
+
+            const teeNames = Array.from(teeNamesSet);
+            if (teeNames.length === 0) {
+                teeNames.push("Standard");
+            }
+
+            // Restore active selection if possible, otherwise use the first tee color available
+            if (!teeNames.includes(activeTeeColor)) {
+                activeTeeColor = teeNames[0];
+            }
+
+            select.innerHTML = teeNames.map(name => `
+                <option value="${name}" ${name === activeTeeColor ? 'selected' : ''}>${name} Tee</option>
+            `).join('');
+        }
+
+        function onTeeColorChange() {
+            const select = document.getElementById('teeColorSelect');
+            if (!select) return;
+            activeTeeColor = select.value;
+            localStorage.setItem('caddyshot_active_tee_color', activeTeeColor);
+            recalculateDistance(true);
+            showToast(`Selected Tee: ${activeTeeColor}`);
+        }
+
+        async function createNewCourse() {
             const input = document.getElementById('newCourseName');
             const name = input.value.trim();
             if (!name) {
@@ -1154,14 +1425,176 @@
                 return;
             }
 
+            // Use id-based lookup instead of attribute selector (avoids quote-nesting
+            // fragility where the HTML attribute delimiter conflicts with the JS string).
+            const addBtn = document.getElementById('btnCreateCourse');
+            const originalBtnText = addBtn ? addBtn.innerText : "Add";
+            if (addBtn) {
+                addBtn.innerText = "Searching...";
+                addBtn.disabled = true;
+            }
+
+            try {
+                const apiKey = "XYXTXD66FBLM57CPBDVLWDOQCU";
+                // Query search endpoint
+                const searchResponse = await fetch(`https://api.golfcourseapi.com/v1/search?search_query=${encodeURIComponent(name)}`, {
+                    headers: {
+                        "Authorization": `Key ${apiKey}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!searchResponse.ok) {
+                    throw new Error(`Search failed: HTTP_${searchResponse.status}`);
+                }
+
+                const searchData = await searchResponse.json();
+                const rawCourses = searchData.courses || searchData.data || [];
+
+                if (rawCourses.length === 0) {
+                    showToast("No courses found in database. Creating local blank course.");
+                    createBlankCourseFallback(name);
+                    return;
+                }
+
+                const matchedCourse = rawCourses[0];
+                const courseId = matchedCourse.id;
+
+                showToast(`Course found. Importing details...`);
+                // Query course details endpoint
+                const detailsResponse = await fetch(`https://api.golfcourseapi.com/v1/courses/${courseId}`, {
+                    headers: {
+                        "Authorization": `Key ${apiKey}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!detailsResponse.ok) {
+                    throw new Error(`Details fetch failed: HTTP_${detailsResponse.status}`);
+                }
+
+                const detailsData = await detailsResponse.json();
+                const courseName = detailsData.course_name || detailsData.name || matchedCourse.course_name || name;
+
+                const newCourse = {
+                    name: courseName,
+                    id: courseId,
+                    holes: {}
+                };
+
+                const rawHoles = detailsData.holes || [];
+                for (let i = 1; i <= 18; i++) {
+                    let rawHole = null;
+                    if (Array.isArray(rawHoles)) {
+                        rawHole = rawHoles.find(h => h.number === i || h.hole_number === i) || rawHoles[i - 1];
+                    } else if (rawHoles && typeof rawHoles === 'object') {
+                        rawHole = rawHoles[i];
+                    }
+                    rawHole = rawHole || {};
+
+                    const greenLat = Number(rawHole.green_latitude || rawHole.green_lat || rawHole.latitude || (rawHole.green && (rawHole.green.latitude || rawHole.green.lat)) || detailsData.latitude || (detailsData.location && detailsData.location.latitude) || 36.568600);
+                    const greenLon = Number(rawHole.green_longitude || rawHole.green_lon || rawHole.longitude || (rawHole.green && (rawHole.green.longitude || rawHole.green.lon)) || detailsData.longitude || (detailsData.location && detailsData.location.longitude) || -121.948200);
+
+                    const tees = {};
+                    let rawTees = rawHole.tees || rawHole.tee_boxes || [];
+                    
+                    if ((!rawTees || rawTees.length === 0) && detailsData.tees) {
+                        if (Array.isArray(detailsData.tees)) {
+                            rawTees = detailsData.tees;
+                        } else if (typeof detailsData.tees === 'object') {
+                            rawTees = [...(detailsData.tees.male || []), ...(detailsData.tees.female || [])];
+                        }
+                    }
+
+                    if (Array.isArray(rawTees) && rawTees.length > 0) {
+                        rawTees.forEach(t => {
+                            const color = t.tee_name || t.color || t.name || "Standard";
+                            const tLat = Number(t.latitude || t.lat || (greenLat - 0.0012));
+                            const tLon = Number(t.longitude || t.lon || greenLon);
+                            tees[color] = {
+                                name: color,
+                                lat: tLat,
+                                lon: tLon,
+                                yardage: t.yardage || 0,
+                                slope: t.slope_rating || t.slope || 0,
+                                rating: t.course_rating || t.rating || 0
+                            };
+                        });
+                    }
+
+                    if (Object.keys(tees).length === 0) {
+                        tees["Standard"] = {
+                            name: "Standard",
+                            lat: greenLat - 0.0012,
+                            lon: greenLon,
+                            yardage: 0,
+                            slope: 0,
+                            rating: 0
+                        };
+                    }
+
+                    newCourse.holes[i] = {
+                        name: rawHole.name || `Hole ${i}`,
+                        lat: greenLat,
+                        lon: greenLon,
+                        tees: tees,
+                        // Legacy support properties
+                        teeLat: Object.values(tees)[0].lat,
+                        teeLon: Object.values(tees)[0].lon
+                    };
+                }
+
+                courses[courseName] = newCourse;
+                activeCourse = courseName;
+                saveCoursesToStorage();
+                input.value = '';
+
+                // Set initial active tee color
+                activeTeeColor = Object.keys(newCourse.holes[1].tees)[0] || "Standard";
+                updateTeeColorDropdown();
+
+                populateCourseSelectDropdown();
+                renderHolesEditorInputs();
+                
+                showToast(`Imported Course: ${courseName}`);
+                
+                currentHole = 1;
+                currentShot = 1;
+                updateUI();
+                recalculateDistance(true);
+            } catch (error) {
+                console.error("GolfCourseAPI import error, fallback to blank course:", error);
+                showToast("API import failed. Creating local blank course.");
+                createBlankCourseFallback(name);
+            } finally {
+                if (addBtn) {
+                    addBtn.innerText = originalBtnText;
+                    addBtn.disabled = false;
+                }
+            }
+        }
+
+        function createBlankCourseFallback(name) {
             const newHoles = {};
             for (let i = 1; i <= 18; i++) {
+                const baseLat = 36.568600 + (i * 0.0002);
+                const baseLon = -121.948200 + (i * 0.0002);
                 newHoles[i] = {
                     name: `Hole ${i}`,
-                    lat: 36.568600,
-                    lon: -121.948200,
-                    teeLat: 36.566800,
-                    teeLon: -121.948400
+                    lat: baseLat,
+                    lon: baseLon,
+                    tees: {
+                        "Standard": {
+                            name: "Standard",
+                            lat: baseLat - 0.0012,
+                            lon: baseLon,
+                            yardage: 0,
+                            slope: 0,
+                            rating: 0
+                        }
+                    },
+                    teeLat: baseLat - 0.0012,
+                    teeLon: baseLon
                 };
             }
 
@@ -1172,17 +1605,37 @@
 
             activeCourse = name;
             saveCoursesToStorage();
-            input.value = '';
+            
+            const input = document.getElementById('newCourseName');
+            if (input) input.value = '';
+
+            activeTeeColor = "Standard";
+            updateTeeColorDropdown();
             
             populateCourseSelectDropdown();
             renderHolesEditorInputs();
-            
-            showToast(`Created Course: ${name}`);
             
             currentHole = 1;
             currentShot = 1;
             updateUI();
             recalculateDistance(true);
+        }
+
+        function addCourseManually() {
+            const input = document.getElementById('newCourseName');
+            const name = input.value.trim();
+            if (!name) {
+                showToast("Please enter a course name");
+                return;
+            }
+
+            if (courses[name]) {
+                showToast("Course already exists");
+                return;
+            }
+
+            createBlankCourseFallback(name);
+            showToast(`Created Course: ${name}`);
         }
 
         function deleteCurrentCourse() {
@@ -1197,6 +1650,7 @@
                 activeCourse = Object.keys(courses)[0];
                 saveCoursesToStorage();
                 
+                updateTeeColorDropdown();
                 populateCourseSelectDropdown();
                 renderHolesEditorInputs();
                 
@@ -1212,9 +1666,10 @@
             const container = document.getElementById('holesInputsContainer');
             if (!container) return;
             const holes = courses[activeCourse].holes;
+            const maxHoles = Object.keys(holes).length;
 
             let html = '';
-            for (let i = 1; i <= 18; i++) {
+            for (let i = 1; i <= maxHoles; i++) {
                 const h = holes[i] || { lat: 36.568600, lon: -121.948200, teeLat: 36.566800, teeLon: -121.948400 };
                 html += `
                     <div class="py-2.5 px-3 bg-slate-950/40 rounded-xl border border-slate-800 space-y-2">
@@ -1323,7 +1778,8 @@
                 
                 showToast(`Saved Hole ${captureHoleNum} Tee!`);
                 
-                if (captureHoleNum < 18) {
+                const maxHoles = Object.keys(courses[activeCourse].holes).length;
+                if (captureHoleNum < maxHoles) {
                     captureHoleNum += 1;
                     currentHole = captureHoleNum;
                     captureTarget = 'green';
@@ -1334,7 +1790,7 @@
                     updateUI();
                 } else {
                     disableCaptureMode();
-                    showToast("Finished mapping all 18 holes!");
+                    showToast(`Finished mapping all ${maxHoles} holes!`);
                 }
             }
             recalculateDistance(true);
@@ -1342,7 +1798,8 @@
 
         function saveCourseSettings() {
             try {
-                for (let i = 1; i <= 18; i++) {
+                const maxHoles = Object.keys(courses[activeCourse].holes).length;
+                for (let i = 1; i <= maxHoles; i++) {
                     const latInput = document.getElementById(`lat-input-${i}`);
                     const lonInput = document.getElementById(`lon-input-${i}`);
                     const teeLatInput = document.getElementById(`tee-lat-input-${i}`);
@@ -1362,6 +1819,15 @@
                     if (!isNaN(teeLatVal) && !isNaN(teeLonVal)) {
                         courses[activeCourse].holes[i].teeLat = teeLatVal;
                         courses[activeCourse].holes[i].teeLon = teeLonVal;
+                        
+                        // Sync with default tee if exists
+                        if (courses[activeCourse].holes[i].tees) {
+                            const defaultTeeKey = Object.keys(courses[activeCourse].holes[i].tees)[0] || "Standard";
+                            if (courses[activeCourse].holes[i].tees[defaultTeeKey]) {
+                                courses[activeCourse].holes[i].tees[defaultTeeKey].lat = teeLatVal;
+                                courses[activeCourse].holes[i].tees[defaultTeeKey].lon = teeLonVal;
+                            }
+                        }
                     }
                 }
                 saveCoursesToStorage();
@@ -1371,13 +1837,54 @@
             }
         }
 
-        // State for layup intermediate points & long hold HUD toggle
+        // State for layup points & long hold HUD toggle
         let layupPoint = null; // { lat, lon }
         let layupMarker = null;
         let midpointMarker1 = null;
         let midpointMarker2 = null;
         let pressTimer = null;
         let isUIVisible = true;
+        // NOTE: isDraggingMarker is declared at line 474 (global state block). Removed duplicate here.
+
+        function makeMarkerDraggable(marker, type) {
+            marker.setDraggable(true);
+
+            marker.on('dragstart', () => {
+                isDraggingMarker = true;
+            });
+
+            marker.on('drag', () => {
+                const lngLat = marker.getLngLat();
+                if (type === 'layup') {
+                    layupPoint = { lat: lngLat.lat, lon: lngLat.lng };
+                } else if (type === 'green') {
+                    tempGreenLoc = { lat: lngLat.lat, lon: lngLat.lng };
+                } else if (type === 'tee') {
+                    tempTeeLoc = { lat: lngLat.lat, lon: lngLat.lng };
+                }
+                recalculateDistance(false); // Update paths and distances in real-time, no fitBounds
+            });
+
+            marker.on('dragend', () => {
+                isDraggingMarker = false;
+                recalculateDistance(false);
+            });
+
+            // Scale-up on press down for premium "hold and drag" feel
+            const el = marker.getElement();
+            el.addEventListener('pointerdown', (e) => {
+                e.stopPropagation(); // prevent map panning
+                el.style.transform = 'scale(1.25)';
+                el.style.transition = 'transform 0.15s ease-out';
+            });
+
+            const resetScale = () => {
+                el.style.transform = '';
+            };
+            el.addEventListener('pointerup', resetScale);
+            el.addEventListener('pointercancel', resetScale);
+            el.addEventListener('pointerout', resetScale);
+        }
 
         function setLayupPoint(lat, lon) {
             if (!map) return;
@@ -1389,13 +1896,15 @@
             } else {
                 const layupEl = document.createElement('div');
                 layupEl.innerHTML = `
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-500/25 border-2 border-yellow-400 shadow-lg shadow-slate-950/60 animate-pulse">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-500/25 border-2 border-yellow-400 shadow-lg shadow-slate-950/60 animate-pulse cursor-pointer">
                         <div class="w-2.5 h-2.5 bg-yellow-400 rounded-full"></div>
                     </div>
                 `;
                 layupMarker = new maplibregl.Marker({ element: layupEl })
                     .setLngLat([lon, lat])
                     .addTo(map);
+
+                makeMarkerDraggable(layupMarker, 'layup');
             }
             
             const clearSpotBtn = document.getElementById('clearSpotBtn');
@@ -1592,6 +2101,12 @@
                 currentHole = 1;
                 currentShot = 1;
             }
+            
+            // Revert temporary overrides when loading round state
+            tempTeeLoc = null;
+            tempGreenLoc = null;
+            clearLayupPoint();
+            
             updateUI();
         }
 
@@ -1642,6 +2157,10 @@
                 currentShot = 1;
                 selectLie('Tee');
                 clearManualOverride();
+                
+                // Revert temporary overrides when resetting course history
+                tempTeeLoc = null;
+                tempGreenLoc = null;
                 clearLayupPoint();
                 
                 updateUI();
@@ -1656,10 +2175,27 @@
             const holeDisplay = document.getElementById('currentHoleDisplay');
             const courseDisplay = document.getElementById('courseNameDisplay');
             const shotDisplay = document.getElementById('currentShotDisplay');
+            const enterShotBtn = document.getElementById('enterShotBtn');
+            const finishHoleBtn = document.getElementById('finishHoleBtn');
             
             if (holeDisplay) holeDisplay.innerText = currentHole;
             if (courseDisplay) courseDisplay.innerText = activeCourse;
             if (shotDisplay) shotDisplay.innerText = currentShot;
+
+            if (enterShotBtn) {
+                if (currentShot === 1) {
+                    enterShotBtn.innerText = "Hole Start";
+                    enterShotBtn.className = "flex-[4] bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all";
+                    if (finishHoleBtn) finishHoleBtn.classList.add('hidden');
+                } else {
+                    enterShotBtn.innerText = "Shot Complete";
+                    enterShotBtn.className = "flex-[3] bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all";
+                    if (finishHoleBtn) {
+                        finishHoleBtn.classList.remove('hidden');
+                        finishHoleBtn.className = "flex-[2] bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-extrabold py-3.5 rounded-xl text-center text-xs uppercase tracking-widest transition-all active:scale-95";
+                    }
+                }
+            }
         }
 
         function updateCaptureBannerUI() {

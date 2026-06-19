@@ -1,4 +1,4 @@
-const CACHE_NAME = 'caddyshot-v3';
+const CACHE_NAME = 'caddyshot-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -53,7 +53,13 @@ self.addEventListener('fetch', (e) => {
         return response;
       });
     }).catch(() => {
-      // Offline fallback
+      // Offline fallback: return a minimal 503 response so respondWith is
+      // fulfilled rather than rejected (a rejected promise produces a hard
+      // network error visible to the user instead of a graceful failure).
+      return new Response('Offline – please reconnect.', {
+        status: 503,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     })
   );
 });
