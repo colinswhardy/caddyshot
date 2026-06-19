@@ -138,16 +138,17 @@
                     </div>
                 </button>
 
-                <!-- Tile 5: Blank (Stats / Club Distances) -->
-                <div class="bg-slate-900/30 backdrop-blur border border-slate-800/40 rounded-2xl p-4 flex flex-col justify-between items-start h-32 opacity-50 select-none">
-                    <div class="w-10 h-10 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-center text-slate-600">
+                <!-- Tile 5: Stats (Strokes Gained) -->
+                <button onclick="setView('stats')" class="bg-slate-900/60 backdrop-blur border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between items-start h-32 hover:bg-slate-800/80 hover:border-emerald-500/50 transition-all active:scale-95 group">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 8v8m-4-5v5m-4-2v2M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                     </div>
                     <div class="flex flex-col items-start text-left mt-2">
-                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500">Stats</span>
-                        <span class="text-[9px] text-slate-600 font-bold mt-0.5">Coming Soon</span>
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-200">Stats</span>
+                        <span id="stats-tile-status" class="text-[9px] text-slate-500 font-bold mt-0.5">Strokes Gained</span>
                     </div>
-                </div>
+                </button>
+
 
                 <!-- Tile 6: Blank -->
                 <div class="bg-slate-900/30 backdrop-blur border border-slate-800/40 rounded-2xl p-4 flex flex-col justify-between items-start h-32 opacity-50 select-none">
@@ -249,45 +250,90 @@
             </button>
         </div>
 
-        <!-- Last Round Detail Overlay -->
-        <div id="last-round-modal" class="hidden absolute inset-0 z-30 bg-slate-950/60 backdrop-blur-sm flex flex-col justify-end">
-            <div class="bg-slate-900/95 backdrop-blur-md border-t border-slate-800 rounded-t-3xl p-5 w-full h-[80vh] flex flex-col justify-between shadow-2xl">
+        <!-- Stats Screen Overlay -->
+        <div id="stats-screen" class="hidden absolute inset-0 z-30 flex flex-col justify-between p-6 bg-slate-950/95 backdrop-blur-lg overflow-y-auto no-scrollbar transition-all duration-300">
+            <div class="flex flex-col h-full justify-between">
                 <div>
+                    <!-- Header -->
+                    <div class="flex justify-between items-center mt-6 border-b border-slate-800/80 pb-3">
+                        <h3 class="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-1.5">
+                            <span>📊</span> Strokes Gained Dashboard
+                        </h3>
+                        <button onclick="setView('home')" class="text-slate-500 hover:text-slate-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Stats Content -->
+                    <div id="statsContentContainer" class="space-y-4 mt-6">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Footer Return Button -->
+                <button onclick="setView('home')" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-3.5 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all active:scale-[0.98] mt-6">
+                    Return to Home
+                </button>
+            </div>
+        </div>
+
+        <!-- Last Round Detail Overlay (Round Reviewer) -->
+        <div id="last-round-modal" class="hidden absolute inset-0 z-30 bg-slate-950/60 backdrop-blur-sm flex flex-col justify-end">
+            <div class="bg-slate-900/95 backdrop-blur-md border-t border-slate-800 rounded-t-3xl p-5 w-full h-[90vh] flex flex-col justify-between shadow-2xl">
+                <div class="flex flex-col flex-grow overflow-hidden">
                     <!-- Sheet Handle Indicator -->
                     <div class="w-12 h-1 bg-slate-800 rounded-full mx-auto mb-3"></div>
                     
                     <!-- Header -->
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h3 class="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-1.5">
-                            <span>🏆</span> Last Saved Round Details
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <h3 class="text-xs font-black text-slate-200 uppercase tracking-widest flex items-center gap-1.5">
+                            <span>🏆</span> Round Review & Editor
                         </h3>
                         <button onclick="closeLastRoundModal()" class="text-slate-500 hover:text-slate-300">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </div>
 
-                    <!-- Round Info Bar -->
-                    <div class="flex flex-col mt-4 bg-slate-950/40 border border-slate-800/80 p-3 rounded-xl">
-                        <div class="flex justify-between items-center">
-                            <span id="lastRoundCourse" class="font-extrabold text-xs text-emerald-400 uppercase tracking-wide truncate max-w-[200px]">Course Name</span>
-                            <span id="lastRoundStrokes" class="font-extrabold text-sm text-slate-100">-- Shots</span>
+                    <!-- Round Selector & Info -->
+                    <div class="flex items-center justify-between mt-2.5 bg-slate-950/50 border border-slate-800/80 p-2.5 rounded-xl text-xs">
+                        <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                            <span class="text-[9px] text-slate-500 uppercase tracking-wider font-extrabold">Round:</span>
+                            <select id="reviewRoundSelect" onchange="loadRoundForReview(this.value)" class="bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[11px] text-slate-200 font-bold focus:outline-none truncate max-w-[150px]">
+                                <!-- Options populated dynamically -->
+                            </select>
                         </div>
-                        <span id="lastRoundDate" class="text-[9px] text-slate-500 font-bold mt-1">Date</span>
+                        <div class="text-right">
+                            <span id="lastRoundStrokes" class="font-extrabold text-xs text-emerald-400">-- Shots</span>
+                            <div id="lastRoundDate" class="text-[8px] text-slate-500 font-bold">Date</div>
+                        </div>
+                    </div>
+
+                    <!-- Hole Selector (1-18 Tabs) -->
+                    <div id="reviewHoleSelectorContainer" class="flex gap-1.5 overflow-x-auto no-scrollbar py-2 mt-2 border-b border-slate-800/40">
+                        <!-- Populated dynamically (1 to 18 circular buttons) -->
+                    </div>
+
+                    <!-- Fast SVG Shot Visualization -->
+                    <div id="reviewHoleSvgContainer" class="w-full h-[160px] min-h-[160px] mt-2 relative rounded-xl overflow-hidden">
+                        <!-- SVG injected here -->
+                    </div>
+
+                    <!-- Shot details editor list -->
+                    <div id="lastRoundDetailsContainer" class="flex-1 overflow-y-auto my-2 pr-1 space-y-2 no-scrollbar">
+                        <!-- Populated dynamically -->
                     </div>
                 </div>
 
-                <!-- Scrollable Hole-by-Hole Details -->
-                <div id="lastRoundDetailsContainer" class="flex-1 overflow-y-auto my-3 pr-1 space-y-2 no-scrollbar">
-                    <!-- Populated dynamically -->
-                </div>
-
                 <!-- Footer Action Buttons -->
-                <div class="flex gap-2">
-                    <button onclick="exportLastRoundCSV()" class="flex-1 bg-slate-850 hover:bg-slate-800 border border-slate-800 py-3 rounded-xl text-xs uppercase font-extrabold tracking-widest text-slate-300 transition-all active:scale-[0.98]">
+                <div class="flex gap-2 mt-1">
+                    <button onclick="addShotToReviewedRound()" class="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 py-2.5 rounded-xl text-[10px] uppercase font-extrabold tracking-widest transition-all active:scale-[0.98]">
+                        ➕ Add Shot
+                    </button>
+                    <button onclick="exportLastRoundCSV()" class="flex-1 bg-slate-850 hover:bg-slate-800 border border-slate-800 py-2.5 rounded-xl text-[10px] uppercase font-extrabold tracking-widest text-slate-300 transition-all active:scale-[0.98]">
                         Export CSV
                     </button>
-                    <button onclick="closeLastRoundModal()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-3 rounded-xl text-xs uppercase font-extrabold tracking-widest text-slate-950 transition-all active:scale-[0.98]">
-                        Close Details
+                    <button onclick="closeLastRoundModal()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-2.5 rounded-xl text-[10px] uppercase font-extrabold tracking-widest text-slate-950 transition-all active:scale-[0.98]">
+                        Finish
                     </button>
                 </div>
             </div>
@@ -750,6 +796,8 @@
         let captureTarget = 'green'; // 'green' or 'tee'
         let captureSourceView = 'play';
         let currentView = 'home';
+        let reviewActiveRoundId = null;
+        let reviewActiveHole = 1;
 
         // Lie button class constants (avoids rebuilding long strings on every selectLie call)
         const LIE_BASE = 'py-1.5 rounded-lg border transition-all duration-200 backdrop-blur-sm text-[9.5px] font-extrabold uppercase tracking-wider text-center flex items-center justify-center';
@@ -767,6 +815,7 @@
 
         // Load data on page launch
         window.addEventListener('DOMContentLoaded', () => {
+            initMockSavedRoundDataIfEmpty();
             loadCoursesFromStorage();
             
             // Load persistent tee color
@@ -1739,7 +1788,7 @@
 
             elements.forEach(el => {
                 const tags = el.tags || {};
-                const holeRef = tags.ref || tags.hole;
+                const holeRef = tags.ref || tags.Hole || tags.hole;
                 if (!holeRef) return;
 
                 const holeNum = parseInt(holeRef, 10);
@@ -2038,7 +2087,7 @@
                 let holeRefs = [];
                 elements.forEach(el => {
                     const tags = el.tags || {};
-                    const holeRef = tags.ref || tags.hole;
+                    const holeRef = tags.ref || tags.Hole || tags.hole;
                     if (holeRef) {
                         const hNum = parseInt(holeRef, 10);
                         if (!isNaN(hNum) && hNum > 0 && hNum <= 36) {
@@ -2090,7 +2139,7 @@
 
                 elements.forEach(el => {
                     const tags = el.tags || {};
-                    const holeRef = tags.ref || tags.hole;
+                    const holeRef = tags.ref || tags.Hole || tags.hole;
                     if (!holeRef) return;
 
                     const holeNum = parseInt(holeRef, 10);
@@ -2988,6 +3037,7 @@
             // Hide screen overlays
             document.getElementById('home-screen').classList.add('hidden');
             document.getElementById('settings-screen').classList.add('hidden');
+            document.getElementById('stats-screen').classList.add('hidden');
             
             const header = document.querySelector('header');
             const shotDisp = document.getElementById('shotDisplayContainer');
@@ -3006,6 +3056,13 @@
             } else if (viewName === 'settings') {
                 document.getElementById('settings-screen').classList.remove('hidden');
                 populateSettingsSelects();
+                if (header) header.classList.add('hidden');
+                if (strokeTracker) strokeTracker.classList.add('hidden');
+                if (topBadges) topBadges.classList.add('hidden');
+                if (refreshGps) refreshGps.classList.add('hidden');
+            } else if (viewName === 'stats') {
+                document.getElementById('stats-screen').classList.remove('hidden');
+                renderStrokesGainedDashboard();
                 if (header) header.classList.add('hidden');
                 if (strokeTracker) strokeTracker.classList.add('hidden');
                 if (topBadges) topBadges.classList.add('hidden');
@@ -3054,7 +3111,7 @@
 
         function loadLastRound() {
             const statusLabel = document.getElementById('last-round-tile-status');
-            if (!statusLabel) return;
+            const statsLabel = document.getElementById('stats-tile-status');
 
             let savedRounds = [];
             const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
@@ -3064,16 +3121,33 @@
                 } catch (e) {}
             }
 
-            if (savedRounds.length > 0) {
-                const last = savedRounds[savedRounds.length - 1];
-                const dateStr = new Date(last.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
-                statusLabel.innerText = `${last.courseName} (${dateStr}) // ${last.totalStrokes} Shots`;
-                statusLabel.classList.add('text-emerald-400');
-                statusLabel.classList.remove('text-slate-500');
-            } else {
-                statusLabel.innerText = "No saved rounds yet";
-                statusLabel.classList.remove('text-emerald-400');
-                statusLabel.classList.add('text-slate-500');
+            if (statusLabel) {
+                if (savedRounds.length > 0) {
+                    const last = savedRounds[savedRounds.length - 1];
+                    const dateStr = new Date(last.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                    statusLabel.innerText = `${last.courseName} (${dateStr}) // ${last.totalStrokes} Shots`;
+                    statusLabel.classList.add('text-emerald-400');
+                    statusLabel.classList.remove('text-slate-500');
+                } else {
+                    statusLabel.innerText = "No saved rounds yet";
+                    statusLabel.classList.remove('text-emerald-400');
+                    statusLabel.classList.add('text-slate-500');
+                }
+            }
+
+            if (statsLabel) {
+                if (savedRounds.length > 0) {
+                    const stats = calculateOverallStats();
+                    const avg = stats.avgRoundSg;
+                    const sign = avg >= 0 ? '+' : '';
+                    statsLabel.innerText = `Avg SG: ${sign}${avg.toFixed(2)}`;
+                    statsLabel.classList.add('text-emerald-400');
+                    statsLabel.classList.remove('text-slate-500');
+                } else {
+                    statsLabel.innerText = "Strokes Gained";
+                    statsLabel.classList.remove('text-emerald-400');
+                    statsLabel.classList.add('text-slate-500');
+                }
             }
         }
 
@@ -3147,44 +3221,7 @@
             }
 
             const last = savedRounds[savedRounds.length - 1];
-            
-            document.getElementById('lastRoundCourse').innerText = last.courseName;
-            document.getElementById('lastRoundStrokes').innerText = `${last.totalStrokes} Shots`;
-            document.getElementById('lastRoundDate').innerText = new Date(last.date).toLocaleDateString([], {
-                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-            });
-
-            const container = document.getElementById('lastRoundDetailsContainer');
-            if (container) {
-                const shotsByHole = {};
-                last.shots.forEach(s => {
-                    if (!shotsByHole[s.hole]) shotsByHole[s.hole] = [];
-                    shotsByHole[s.hole].push(s);
-                });
-
-                container.innerHTML = Object.keys(shotsByHole).map(hNum => {
-                    const holeShots = shotsByHole[hNum].sort((a, b) => a.shot - b.shot);
-                    const totalDist = holeShots.reduce((sum, s) => sum + s.distance, 0);
-                    return `
-                        <div class="p-3 bg-slate-950/40 rounded-xl border border-slate-800/80 space-y-2">
-                            <div class="flex justify-between items-center text-xs font-extrabold uppercase text-slate-400 border-b border-slate-800/40 pb-1.5">
-                                <span class="text-emerald-400">Hole ${hNum}</span>
-                                <span>${holeShots.length} Shots // ${totalDist} YDS</span>
-                            </div>
-                            <div class="space-y-1">
-                                ${holeShots.map(s => `
-                                    <div class="flex justify-between text-[10.5px] text-slate-300">
-                                        <span>Shot ${s.shot} (${s.lie})</span>
-                                        <span class="font-bold text-emerald-400">${s.distance} YDS</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            document.getElementById('last-round-modal').classList.remove('hidden');
+            openSavedRoundReview(last.id);
         }
 
         function closeLastRoundModal() {
@@ -3205,9 +3242,14 @@
                 return;
             }
 
-            const last = savedRounds[savedRounds.length - 1];
+            // Export active reviewed round or fallback to last
+            let activeRound = savedRounds.find(r => r.id === reviewActiveRoundId);
+            if (!activeRound) {
+                activeRound = savedRounds[savedRounds.length - 1];
+            }
+
             let csv = "Hole,Shot,Lie,Distance (Yds),Manual Override,Shot Latitude,Shot Longitude,Green Latitude,Green Longitude,Timestamp\n";
-            last.shots.forEach(s => {
+            activeRound.shots.forEach(s => {
                 if (s) {
                     csv += `${s.hole},${s.shot},"${s.lie}",${s.distance},${s.isOverride ? 'Yes' : 'No'},${s.shotLat || ''},${s.shotLon || ''},${s.greenLat},${s.greenLon},"${s.timestamp}"\n`;
                 }
@@ -3217,7 +3259,7 @@
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
                 const url = URL.createObjectURL(blob);
-                const filename = `${last.courseName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_saved_round_${last.id}.csv`;
+                const filename = `${activeRound.courseName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_saved_round_${activeRound.id}.csv`;
                 link.setAttribute("href", url);
                 link.setAttribute("download", filename);
                 link.style.visibility = 'hidden';
@@ -3229,6 +3271,791 @@
             } catch (err) {
                 console.error("Export Error:", err);
                 showToast("Export failed.");
+            }
+        }
+
+        // ==============================================
+        // STROKES GAINED STATS CALCULATIONS & DASHBOARD
+        // ==============================================
+
+        const SG_BASELINES = {
+            Tee: [
+                { d: 500, e: 4.5 },
+                { d: 450, e: 4.2 },
+                { d: 400, e: 3.9 },
+                { d: 350, e: 3.7 },
+                { d: 300, e: 3.5 },
+                { d: 250, e: 3.3 },
+                { d: 200, e: 3.1 },
+                { d: 150, e: 2.9 },
+                { d: 100, e: 2.7 },
+                { d: 0, e: 2.5 }
+            ],
+            Fairway: [
+                { d: 500, e: 4.4 },
+                { d: 400, e: 3.8 },
+                { d: 300, e: 3.4 },
+                { d: 250, e: 3.2 },
+                { d: 200, e: 3.0 },
+                { d: 150, e: 2.8 },
+                { d: 100, e: 2.6 },
+                { d: 50, e: 2.4 },
+                { d: 30, e: 2.2 },
+                { d: 10, e: 2.0 },
+                { d: 0, e: 0 }
+            ],
+            Rough: [
+                { d: 500, e: 4.6 },
+                { d: 400, e: 4.0 },
+                { d: 300, e: 3.6 },
+                { d: 250, e: 3.4 },
+                { d: 200, e: 3.2 },
+                { d: 150, e: 3.0 },
+                { d: 100, e: 2.8 },
+                { d: 50, e: 2.6 },
+                { d: 30, e: 2.4 },
+                { d: 10, e: 2.1 },
+                { d: 0, e: 0 }
+            ],
+            Sand: [
+                { d: 400, e: 4.2 },
+                { d: 300, e: 3.8 },
+                { d: 200, e: 3.4 },
+                { d: 150, e: 3.2 },
+                { d: 100, e: 3.0 },
+                { d: 50, e: 2.8 },
+                { d: 30, e: 2.6 },
+                { d: 15, e: 2.4 },
+                { d: 0, e: 0 }
+            ],
+            Green: [
+                { d: 30, e: 2.2 },
+                { d: 20, e: 2.0 },
+                { d: 15, e: 1.9 },
+                { d: 10, e: 1.7 },
+                { d: 7, e: 1.5 },
+                { d: 5, e: 1.4 },
+                { d: 3, e: 1.2 },
+                { d: 2, e: 1.1 },
+                { d: 1, e: 1.02 },
+                { d: 0, e: 0 }
+            ],
+            Penalty: [
+                { d: 500, e: 5.5 },
+                { d: 0, e: 1.0 }
+            ]
+        };
+
+        function getExpectedStrokes(distance, lie) {
+            const dist = Math.max(0, distance);
+            const table = SG_BASELINES[lie] || SG_BASELINES['Fairway'];
+            
+            if (dist <= 0) return 0;
+            const sorted = [...table].sort((a, b) => a.d - b.d);
+            
+            if (dist <= sorted[0].d) return sorted[0].e;
+            if (dist >= sorted[sorted.length - 1].d) return sorted[sorted.length - 1].e;
+            
+            for (let i = 0; i < sorted.length - 1; i++) {
+                const p1 = sorted[i];
+                const p2 = sorted[i+1];
+                if (dist >= p1.d && dist <= p2.d) {
+                    const fraction = (dist - p1.d) / (p2.d - p1.d);
+                    return p1.e + fraction * (p2.e - p1.e);
+                }
+            }
+            return 3.0;
+        }
+
+        function inferPar(distance) {
+            if (distance < 250) return 3;
+            if (distance < 470) return 4;
+            return 5;
+        }
+
+        function calculateRoundStrokesGained(round) {
+            const shots = round.shots || [];
+            const shotsByHole = {};
+            shots.forEach(s => {
+                if (!shotsByHole[s.hole]) shotsByHole[s.hole] = [];
+                shotsByHole[s.hole].push(s);
+            });
+
+            let roundSg = {
+                total: 0,
+                ott: 0,
+                app: 0,
+                arg: 0,
+                putt: 0,
+                count: { total: 0, ott: 0, app: 0, arg: 0, putt: 0 }
+            };
+
+            Object.keys(shotsByHole).forEach(hNum => {
+                const holeShots = shotsByHole[hNum].sort((a, b) => a.shot - b.shot);
+                if (holeShots.length === 0) return;
+
+                let firstShot = holeShots[0];
+                let teeLat = firstShot.shotLat;
+                let teeLon = firstShot.shotLon;
+                let greenLat = firstShot.greenLat;
+                let greenLon = firstShot.greenLon;
+                
+                let holeDistance = 380; // default par 4 fallback
+                if (teeLat && teeLon && greenLat && greenLon) {
+                    holeDistance = calculateDistanceYards(teeLat, teeLon, greenLat, greenLon);
+                } else if (firstShot.distance) {
+                    holeDistance = holeShots.reduce((sum, s) => sum + s.distance, 0);
+                }
+                const holePar = inferPar(holeDistance);
+
+                let remainingDistances = [];
+                let currentRemaining = holeDistance;
+
+                for (let i = 0; i < holeShots.length; i++) {
+                    const s = holeShots[i];
+                    if (s.shotLat && s.shotLon && s.greenLat && s.greenLon) {
+                        currentRemaining = calculateDistanceYards(s.shotLat, s.shotLon, s.greenLat, s.greenLon);
+                    } else {
+                        if (i > 0) {
+                            currentRemaining = Math.max(1, currentRemaining - holeShots[i-1].distance);
+                        }
+                    }
+                    remainingDistances.push(currentRemaining);
+                }
+
+                for (let i = 0; i < holeShots.length; i++) {
+                    const s = holeShots[i];
+                    const startDist = remainingDistances[i];
+                    const startLie = s.lie;
+
+                    let endDist = 0;
+                    let endLie = 'Green';
+                    
+                    if (i < holeShots.length - 1) {
+                        endDist = remainingDistances[i+1];
+                        endLie = holeShots[i+1].lie;
+                    }
+
+                    const expStart = getExpectedStrokes(startDist, startLie);
+                    const expEnd = (i === holeShots.length - 1) ? 0 : getExpectedStrokes(endDist, endLie);
+                    
+                    const sgVal = expStart - expEnd - 1;
+
+                    let category = 'app';
+                    if (startLie === 'Tee') {
+                        if (holePar === 3) {
+                            category = 'app';
+                        } else {
+                            category = 'ott';
+                        }
+                    } else if (startLie === 'Green') {
+                        category = 'putt';
+                    } else {
+                        if (startDist <= 50) {
+                            category = 'arg';
+                        } else {
+                            category = 'app';
+                        }
+                    }
+
+                    roundSg.total += sgVal;
+                    roundSg[category] += sgVal;
+                    roundSg.count.total += 1;
+                    roundSg.count[category] += 1;
+                }
+            });
+
+            return roundSg;
+        }
+
+        function calculateOverallStats() {
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            let overall = {
+                roundsCount: savedRounds.length,
+                totalSg: 0,
+                ott: 0,
+                app: 0,
+                arg: 0,
+                putt: 0,
+                avgRoundSg: 0,
+                avgOtt: 0,
+                avgApp: 0,
+                avgArg: 0,
+                avgPutt: 0
+            };
+
+            if (savedRounds.length === 0) return overall;
+
+            savedRounds.forEach(r => {
+                const rSg = calculateRoundStrokesGained(r);
+                overall.totalSg += rSg.total;
+                overall.ott += rSg.ott;
+                overall.app += rSg.app;
+                overall.arg += rSg.arg;
+                overall.putt += rSg.putt;
+            });
+
+            overall.avgRoundSg = overall.totalSg / overall.roundsCount;
+            overall.avgOtt = overall.ott / overall.roundsCount;
+            overall.avgApp = overall.app / overall.roundsCount;
+            overall.avgArg = overall.arg / overall.roundsCount;
+            overall.avgPutt = overall.putt / overall.roundsCount;
+
+            return overall;
+        }
+
+        function renderStrokesGainedDashboard() {
+            const container = document.getElementById('statsContentContainer');
+            if (!container) return;
+
+            const stats = calculateOverallStats();
+            
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            if (savedRounds.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800/80 text-center space-y-3">
+                        <div class="text-3xl">⛳</div>
+                        <div class="text-xs font-extrabold uppercase text-slate-300">No Saved Rounds Found</div>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">
+                            Play a round of golf, record your shots, and click the "Save Round" button in the Settings menu to compute detailed Strokes Gained stats.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            const formatSG = (val) => {
+                const s = val.toFixed(2);
+                return val >= 0 ? `+${s}` : s;
+            };
+
+            const getProgressHtml = (val) => {
+                const percent = Math.min(100, Math.max(0, ((val + 3) / 6) * 100));
+                const barColor = val >= 0 ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-rose-500 shadow-rose-500/20';
+                return `
+                    <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden relative border border-slate-800/40">
+                        <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-800 z-10"></div>
+                        <div class="h-full ${barColor} rounded-full absolute transition-all" style="left: ${val >= 0 ? '50%' : `${percent}%`}; width: ${Math.abs(val / 6 * 100)}%"></div>
+                    </div>
+                `;
+            };
+
+            let html = `
+                <!-- Overall Card -->
+                <div class="bg-slate-900/60 backdrop-blur border border-slate-800/80 p-4 rounded-2xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+                        <span class="text-[10px] text-slate-500 uppercase tracking-widest font-extrabold">Average SG per Round</span>
+                        <span class="text-xs font-black text-emerald-400">${stats.roundsCount} Rounds Saved</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- OTT -->
+                        <div class="space-y-1 bg-slate-950/30 p-2 rounded-xl border border-slate-850">
+                            <span class="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">Off the Tee (OTT)</span>
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-lg font-black ${stats.avgOtt >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatSG(stats.avgOtt)}</span>
+                                <span class="text-[8.5px] text-slate-600 font-bold">vs Scratch</span>
+                            </div>
+                            ${getProgressHtml(stats.avgOtt)}
+                        </div>
+
+                        <!-- APP -->
+                        <div class="space-y-1 bg-slate-950/30 p-2 rounded-xl border border-slate-850">
+                            <span class="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">Approach (APP)</span>
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-lg font-black ${stats.avgApp >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatSG(stats.avgApp)}</span>
+                                <span class="text-[8.5px] text-slate-600 font-bold">vs Scratch</span>
+                            </div>
+                            ${getProgressHtml(stats.avgApp)}
+                        </div>
+
+                        <!-- ARG -->
+                        <div class="space-y-1 bg-slate-950/30 p-2 rounded-xl border border-slate-850">
+                            <span class="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">Around Green (ARG)</span>
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-lg font-black ${stats.avgArg >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatSG(stats.avgArg)}</span>
+                                <span class="text-[8.5px] text-slate-600 font-bold">vs Scratch</span>
+                            </div>
+                            ${getProgressHtml(stats.avgArg)}
+                        </div>
+
+                        <!-- PUTT -->
+                        <div class="space-y-1 bg-slate-950/30 p-2 rounded-xl border border-slate-850">
+                            <span class="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">Putting (PUTT)</span>
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-lg font-black ${stats.avgPutt >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatSG(stats.avgPutt)}</span>
+                                <span class="text-[8.5px] text-slate-600 font-bold">vs Scratch</span>
+                            </div>
+                            ${getProgressHtml(stats.avgPutt)}
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center bg-slate-950/50 border border-slate-850 p-3 rounded-xl">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold">Total Strokes Gained</span>
+                            <span class="text-[7.5px] text-slate-600 uppercase font-black tracking-wide mt-0.5">Overall Cumulative SG</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xl font-black ${stats.totalSg >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatSG(stats.totalSg)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rounds History List -->
+                <div class="space-y-2">
+                    <span class="text-[10px] text-slate-500 uppercase tracking-widest font-extrabold px-1 block">Saved Rounds Log</span>
+                    <div class="max-h-[220px] overflow-y-auto space-y-2 no-scrollbar pr-1">
+                        ${[...savedRounds].reverse().map(r => {
+                            const rSg = calculateRoundStrokesGained(r);
+                            const dateStr = new Date(r.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                            return `
+                                <div onclick="openSavedRoundReview(${r.id})" class="p-3 bg-slate-900/60 border border-slate-800/80 hover:bg-slate-800/60 hover:border-emerald-500/40 rounded-xl flex items-center justify-between text-xs transition-all active:scale-[0.98] cursor-pointer group">
+                                    <div class="flex flex-col min-w-0">
+                                        <span class="font-extrabold text-slate-200 truncate uppercase text-[11px] tracking-wide group-hover:text-emerald-400 transition-colors">${r.courseName}</span>
+                                        <span class="text-[8.5px] text-slate-500 font-bold mt-0.5">${dateStr} // ${r.holeCount} Holes</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-right flex flex-col">
+                                            <span class="font-black text-slate-200 text-xs">${r.totalStrokes} Shots</span>
+                                            <span class="text-[8.5px] font-bold ${rSg.total >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatSG(rSg.total)} SG</span>
+                                        </div>
+                                        <span class="text-slate-600 text-sm font-bold group-hover:translate-x-0.5 transition-transform">➔</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function openSavedRoundReview(roundId) {
+            reviewActiveRoundId = roundId;
+            reviewActiveHole = 1;
+            populateReviewRoundSelect();
+            loadRoundForReview(roundId);
+            document.getElementById('last-round-modal').classList.remove('hidden');
+        }
+
+        function populateReviewRoundSelect() {
+            const select = document.getElementById('reviewRoundSelect');
+            if (!select) return;
+
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            select.innerHTML = savedRounds.map(r => {
+                const dateStr = new Date(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                return `<option value="${r.id}" ${r.id === reviewActiveRoundId ? 'selected' : ''}>${r.courseName} (${dateStr})</option>`;
+            }).join('');
+        }
+
+        function loadRoundForReview(roundId) {
+            reviewActiveRoundId = parseInt(roundId, 10);
+            
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            const round = savedRounds.find(r => r.id === reviewActiveRoundId);
+            if (!round) {
+                showToast("Round not found.");
+                closeLastRoundModal();
+                return;
+            }
+
+            document.getElementById('lastRoundStrokes').innerText = `${round.totalStrokes} Shots`;
+            document.getElementById('lastRoundDate').innerText = new Date(round.date).toLocaleDateString([], {
+                weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+
+            const shotsByHole = {};
+            round.shots.forEach(s => {
+                if (!shotsByHole[s.hole]) shotsByHole[s.hole] = [];
+                shotsByHole[s.hole].push(s);
+            });
+
+            const holeSelector = document.getElementById('reviewHoleSelectorContainer');
+            if (holeSelector) {
+                const maxHoles = courses[round.courseName] && courses[round.courseName].holes
+                    ? Object.keys(courses[round.courseName].holes).length
+                    : 18;
+                
+                let holesHtml = '';
+                for (let i = 1; i <= maxHoles; i++) {
+                    const hasShots = shotsByHole[i] && shotsByHole[i].length > 0;
+                    const isActive = i === reviewActiveHole;
+                    
+                    let bgClass = 'bg-slate-950 border-slate-800 text-slate-500';
+                    if (hasShots) {
+                        bgClass = isActive 
+                            ? 'bg-emerald-500 border-emerald-500 text-slate-950 scale-105 shadow shadow-emerald-500/25' 
+                            : 'bg-slate-950 border-slate-800/80 text-emerald-400 font-extrabold';
+                    } else if (isActive) {
+                        bgClass = 'bg-slate-800 border-slate-700 text-white scale-105';
+                    }
+                    
+                    holesHtml += `
+                        <button onclick="selectHoleForReview(${i})" class="w-8 h-8 rounded-full border flex items-center justify-center font-black text-[11px] transition-all flex-shrink-0 ${bgClass}">
+                            ${i}
+                        </button>
+                    `;
+                }
+                holeSelector.innerHTML = holesHtml;
+            }
+
+            renderReviewHoleContent(round);
+        }
+
+        function selectHoleForReview(holeNum) {
+            reviewActiveHole = holeNum;
+            loadRoundForReview(reviewActiveRoundId);
+        }
+
+        function renderReviewHoleContent(round) {
+            const holeShots = (round.shots || [])
+                .filter(s => s.hole === reviewActiveHole)
+                .sort((a, b) => a.shot - b.shot);
+
+            const container = document.getElementById('lastRoundDetailsContainer');
+            const svgContainer = document.getElementById('reviewHoleSvgContainer');
+            
+            let teeCoords = null;
+            let greenCoords = null;
+            
+            const courseData = courses[round.courseName];
+            if (courseData && courseData.holes && courseData.holes[reviewActiveHole]) {
+                const baseHole = courseData.holes[reviewActiveHole];
+                greenCoords = { lat: baseHole.lat, lon: baseHole.lon };
+                teeCoords = { 
+                    lat: baseHole.teeLat || (baseHole.lat - 0.0012), 
+                    lon: baseHole.teeLon || baseHole.lon 
+                };
+            }
+
+            if (svgContainer) {
+                svgContainer.innerHTML = generateHoleSvg(holeShots, teeCoords, greenCoords);
+            }
+
+            if (!container) return;
+
+            if (holeShots.length === 0) {
+                container.innerHTML = `
+                    <div class="p-5 text-center text-xs text-slate-500 italic bg-slate-950/30 border border-slate-800/40 rounded-xl">
+                        No shots logged on Hole ${reviewActiveHole} for this round.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = holeShots.map(s => {
+                return `
+                    <div class="p-3 bg-slate-950/45 rounded-xl border border-slate-800/80 flex flex-col gap-2.5 hover:bg-slate-850/40 transition-all">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-extrabold uppercase text-[10px] text-emerald-400 tracking-wider flex items-center gap-1.5">
+                                <span class="bg-slate-900 border border-slate-800 w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-black">${s.shot}</span>
+                                Shot ${s.shot}
+                            </span>
+                            <button onclick="deleteShotFromReviewedRound(${s.id})" class="text-slate-600 hover:text-rose-400 p-1 rounded hover:bg-rose-950/20 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-16v1a3 3 0 003 3h10M9 3h6m2 5V4a1 1 0 00-1-1H7a1 1 0 00-1 1v4"/></svg>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[10px]">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[8px] text-slate-500 uppercase tracking-widest font-extrabold">Distance</label>
+                                <div class="flex items-center bg-slate-900 border border-slate-800 rounded px-2 py-1">
+                                    <input type="number" inputmode="numeric" pattern="[0-9]*" value="${s.distance}" 
+                                        oninput="saveEditedShotDistance(${s.id}, this.value)" 
+                                        class="w-full bg-transparent font-extrabold text-emerald-400 text-xs focus:outline-none focus:ring-0">
+                                    <span class="text-[8px] font-bold text-slate-500">YDS</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[8px] text-slate-500 uppercase tracking-widest font-extrabold">Lie Type</label>
+                                <select onchange="saveEditedShotLie(${s.id}, this.value)" class="w-full bg-slate-900 border border-slate-800 rounded py-1 px-1.5 text-xs text-slate-300 font-bold focus:outline-none focus:border-emerald-500">
+                                    <option value="Tee" ${s.lie === 'Tee' ? 'selected' : ''}>Tee</option>
+                                    <option value="Fairway" ${s.lie === 'Fairway' ? 'selected' : ''}>Fairway</option>
+                                    <option value="Rough" ${s.lie === 'Rough' ? 'selected' : ''}>Rough</option>
+                                    <option value="Sand" ${s.lie === 'Sand' ? 'selected' : ''}>Sand</option>
+                                    <option value="Green" ${s.lie === 'Green' ? 'selected' : ''}>Green</option>
+                                    <option value="Penalty" ${s.lie === 'Penalty' ? 'selected' : ''}>Penalty</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function generateHoleSvg(holeShots, teeCoords, greenCoords) {
+            const W = 320;
+            const H = 160;
+            const padding = 20;
+
+            let hasCoords = true;
+            if (!greenCoords || !greenCoords.lat || !greenCoords.lon) hasCoords = false;
+            if (!teeCoords || !teeCoords.lat || !teeCoords.lon) hasCoords = false;
+            
+            holeShots.forEach(s => {
+                if (!s.shotLat || !s.shotLon) hasCoords = false;
+            });
+
+            let points = [];
+            
+            if (hasCoords && holeShots.length > 0) {
+                const lats = [greenCoords.lat, teeCoords.lat, ...holeShots.map(s => s.shotLat)];
+                const lons = [greenCoords.lon, teeCoords.lon, ...holeShots.map(s => s.shotLon)];
+                
+                const minLat = Math.min(...lats);
+                const maxLat = Math.max(...lats);
+                const minLon = Math.min(...lons);
+                const maxLon = Math.max(...lons);
+                
+                const latRange = maxLat - minLat || 0.0001;
+                const lonRange = maxLon - minLon || 0.0001;
+                
+                const project = (lat, lon) => {
+                    const x = padding + ((lon - minLon) / lonRange) * (W - 2 * padding);
+                    const y = H - (padding + ((lat - minLat) / latRange) * (H - 2 * padding));
+                    return { x, y };
+                };
+                
+                const greenPt = project(greenCoords.lat, greenCoords.lon);
+                const teePt = project(teeCoords.lat, teeCoords.lon);
+                
+                points.push({ ...teePt, type: 'tee' });
+                holeShots.forEach(s => {
+                    const pt = project(s.shotLat, s.shotLon);
+                    points.push({ ...pt, type: 'shot', shotNum: s.shot, dist: s.distance, lie: s.lie });
+                });
+                points.push({ ...greenPt, type: 'green' });
+            } else {
+                const teePt = { x: W / 2, y: H - padding };
+                const greenPt = { x: W / 2, y: padding + 10 };
+                
+                points.push({ ...teePt, type: 'tee' });
+                
+                const totalShots = holeShots.length;
+                if (totalShots > 0) {
+                    holeShots.forEach((s, idx) => {
+                        const fraction = (idx + 1) / (totalShots + 1);
+                        const offset = (idx % 2 === 0 ? 1 : -1) * 35 * Math.sin(fraction * Math.PI);
+                        const x = W / 2 + offset;
+                        const y = H - padding - fraction * (H - 2 * padding - 10);
+                        points.push({ x, y, type: 'shot', shotNum: s.shot, dist: s.distance, lie: s.lie });
+                    });
+                }
+                points.push({ ...greenPt, type: 'green' });
+            }
+
+            let svgContent = '';
+            
+            svgContent += `<line x1="${points[0].x}" y1="${points[0].y}" x2="${points[points.length-1].x}" y2="${points[points.length-1].y}" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" />`;
+            
+            for (let i = 0; i < points.length - 1; i++) {
+                const pt1 = points[i];
+                const pt2 = points[i+1];
+                svgContent += `<line x1="${pt1.x}" y1="${pt1.y}" x2="${pt2.x}" y2="${pt2.y}" stroke="#10b981" stroke-width="4" stroke-linecap="round" opacity="0.15" />`;
+                svgContent += `<line x1="${pt1.x}" y1="${pt1.y}" x2="${pt2.x}" y2="${pt2.y}" stroke="#10b981" stroke-width="2" stroke-linecap="round" />`;
+            }
+            
+            points.forEach((pt, idx) => {
+                if (pt.type === 'tee') {
+                    svgContent += `<circle cx="${pt.x}" cy="${pt.y}" r="6" fill="#020617" stroke="#ffffff" stroke-width="2" />`;
+                    svgContent += `<text x="${pt.x}" y="${pt.y + 14}" fill="#94a3b8" font-size="8" font-weight="bold" text-anchor="middle">Tee</text>`;
+                } else if (pt.type === 'green') {
+                    svgContent += `<circle cx="${pt.x}" cy="${pt.y}" r="8" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" />`;
+                    svgContent += `<circle cx="${pt.x}" cy="${pt.y}" r="3" fill="#10b981" />`;
+                    svgContent += `<line x1="${pt.x}" y1="${pt.y - 12}" x2="${pt.x}" y2="${pt.y}" stroke="#ffffff" stroke-width="1.5" />`;
+                    svgContent += `<polygon points="${pt.x},${pt.y - 12} ${pt.x + 8},${pt.y - 9} ${pt.x},${pt.y - 6}" fill="#f59e0b" />`;
+                    svgContent += `<text x="${pt.x}" y="${pt.y + 16}" fill="#10b981" font-size="8" font-weight="bold" text-anchor="middle">Pin</text>`;
+                } else {
+                    svgContent += `<circle cx="${pt.x}" cy="${pt.y}" r="7.5" fill="#1e293b" stroke="#10b981" stroke-width="1.5" />`;
+                    svgContent += `<text x="${pt.x}" y="${pt.y + 3}" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">${pt.shotNum}</text>`;
+                    
+                    const labelY = pt.y - 10;
+                    svgContent += `<rect x="${pt.x - 20}" y="${labelY - 6}" width="40" height="9" rx="2" fill="#0f172a" stroke="#334155" stroke-width="0.5" />`;
+                    svgContent += `<text x="${pt.x}" y="${labelY + 1.5}" fill="#34d399" font-size="7.5" font-weight="bold" text-anchor="middle">${pt.dist}y</text>`;
+                }
+            });
+
+            return `
+                <svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" class="rounded-xl bg-slate-950/60 border border-slate-800/80">
+                    <defs>
+                        <pattern id="gridPattern" width="15" height="15" patternUnits="userSpaceOnUse">
+                            <path d="M 15 0 L 0 0 0 15" fill="none" stroke="#1e293b" stroke-width="0.5" opacity="0.3"/>
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#gridPattern)" />
+                    ${svgContent}
+                </svg>
+            `;
+        }
+
+        function saveEditedShotDistance(shotId, value) {
+            const parsed = parseInt(value, 10) || 0;
+            updateSavedRoundShot(shotId, (s) => {
+                s.distance = parsed;
+            });
+        }
+
+        function saveEditedShotLie(shotId, value) {
+            updateSavedRoundShot(shotId, (s) => {
+                s.lie = value;
+            });
+        }
+
+        function deleteShotFromReviewedRound(shotId) {
+            if (!confirm("Are you sure you want to delete this shot from the round record?")) return;
+
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            const roundIdx = savedRounds.findIndex(r => r.id === reviewActiveRoundId);
+            if (roundIdx !== -1) {
+                const round = savedRounds[roundIdx];
+                const deletedShot = round.shots.find(s => s.id === shotId);
+                if (deletedShot) {
+                    const holeNum = deletedShot.hole;
+                    round.shots = round.shots.filter(s => s.id !== shotId);
+                    
+                    const holeShots = round.shots.filter(s => s.hole === holeNum).sort((a, b) => a.shot - b.shot);
+                    holeShots.forEach((s, idx) => {
+                        s.shot = idx + 1;
+                    });
+                    
+                    round.totalStrokes = round.shots.length;
+                    
+                    localStorage.setItem('caddyshot_saved_rounds_v1', JSON.stringify(savedRounds));
+                    
+                    loadRoundForReview(reviewActiveRoundId);
+                    renderStrokesGainedDashboard();
+                    showToast("Shot Deleted");
+                }
+            }
+        }
+
+        function addShotToReviewedRound() {
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            const roundIdx = savedRounds.findIndex(r => r.id === reviewActiveRoundId);
+            if (roundIdx !== -1) {
+                const round = savedRounds[roundIdx];
+                const holeShots = round.shots.filter(s => s.hole === reviewActiveHole).sort((a, b) => a.shot - b.shot);
+                
+                const nextShotNum = holeShots.length + 1;
+                let defaultLie = 'Fairway';
+                if (nextShotNum === 1) defaultLie = 'Tee';
+                else if (nextShotNum >= 3) defaultLie = 'Green';
+
+                const courseData = courses[round.courseName];
+                let greenLat = 36.568600;
+                let greenLon = -121.948200;
+                if (courseData && courseData.holes && courseData.holes[reviewActiveHole]) {
+                    greenLat = courseData.holes[reviewActiveHole].lat;
+                    greenLon = courseData.holes[reviewActiveHole].lon;
+                }
+
+                const newShot = {
+                    id: Date.now(),
+                    course: round.courseName,
+                    hole: reviewActiveHole,
+                    shot: nextShotNum,
+                    lie: defaultLie,
+                    distance: 100,
+                    isOverride: true,
+                    greenLat: greenLat,
+                    greenLon: greenLon,
+                    shotLat: null,
+                    shotLon: null,
+                    timestamp: new Date().toISOString()
+                };
+
+                round.shots.push(newShot);
+                round.totalStrokes = round.shots.length;
+
+                localStorage.setItem('caddyshot_saved_rounds_v1', JSON.stringify(savedRounds));
+                
+                loadRoundForReview(reviewActiveRoundId);
+                renderStrokesGainedDashboard();
+                showToast(`Shot ${nextShotNum} Added`);
+            }
+        }
+
+        function updateSavedRoundShot(shotId, updateFn) {
+            let savedRounds = [];
+            const rawRounds = localStorage.getItem('caddyshot_saved_rounds_v1');
+            if (rawRounds) {
+                try {
+                    savedRounds = JSON.parse(rawRounds);
+                } catch (e) {}
+            }
+
+            const roundIdx = savedRounds.findIndex(r => r.id === reviewActiveRoundId);
+            if (roundIdx !== -1) {
+                const round = savedRounds[roundIdx];
+                const shot = round.shots.find(s => s.id === shotId);
+                if (shot) {
+                    updateFn(shot);
+                    localStorage.setItem('caddyshot_saved_rounds_v1', JSON.stringify(savedRounds));
+                    
+                    const holeShots = (round.shots || [])
+                        .filter(s => s.hole === reviewActiveHole)
+                        .sort((a, b) => a.shot - b.shot);
+                    
+                    const svgContainer = document.getElementById('reviewHoleSvgContainer');
+                    if (svgContainer) {
+                        let teeCoords = null;
+                        let greenCoords = null;
+                        const courseData = courses[round.courseName];
+                        if (courseData && courseData.holes && courseData.holes[reviewActiveHole]) {
+                            const baseHole = courseData.holes[reviewActiveHole];
+                            greenCoords = { lat: baseHole.lat, lon: baseHole.lon };
+                            teeCoords = { 
+                                lat: baseHole.teeLat || (baseHole.lat - 0.0012), 
+                                lon: baseHole.teeLon || baseHole.lon 
+                            };
+                        }
+                        svgContainer.innerHTML = generateHoleSvg(holeShots, teeCoords, greenCoords);
+                    }
+                    
+                    renderStrokesGainedDashboard();
+                }
             }
         }
 
@@ -3492,6 +4319,52 @@
             } else {
                 section.classList.add('hidden');
                 arrow.classList.remove('rotate-180');
+            }
+        }
+
+        function initMockSavedRoundDataIfEmpty() {
+            const key = 'caddyshot_saved_rounds_v1';
+            if (!localStorage.getItem(key) || JSON.parse(localStorage.getItem(key)).length === 0) {
+                const mockRound = {
+                    id: Date.now() - 86400000, // 1 day ago
+                    courseName: "Innerkip Highlands",
+                    date: new Date(Date.now() - 86400000).toISOString(),
+                    totalStrokes: 19,
+                    holeCount: 5,
+                    shots: [
+                        // Hole 1 (Par 4, 380 yds) -> played in 4 shots (Par)
+                        { id: 101, course: "Innerkip Highlands", hole: 1, shot: 1, lie: "Tee", distance: 260, isOverride: false, greenLat: 43.21521, greenLon: -80.68751, shotLat: 43.21421, shotLon: -80.68751, timestamp: "2026-06-18T10:00:00.000Z" },
+                        { id: 102, course: "Innerkip Highlands", hole: 1, shot: 2, lie: "Fairway", distance: 110, isOverride: false, greenLat: 43.21521, greenLon: -80.68751, shotLat: 43.21481, shotLon: -80.68751, timestamp: "2026-06-18T10:04:00.000Z" },
+                        { id: 103, course: "Innerkip Highlands", hole: 1, shot: 3, lie: "Green", distance: 8, isOverride: false, greenLat: 43.21521, greenLon: -80.68751, shotLat: 43.21516, shotLon: -80.68751, timestamp: "2026-06-18T10:07:00.000Z" },
+                        { id: 104, course: "Innerkip Highlands", hole: 1, shot: 4, lie: "Green", distance: 2, isOverride: false, greenLat: 43.21521, greenLon: -80.68751, shotLat: 43.21520, shotLon: -80.68751, timestamp: "2026-06-18T10:08:00.000Z" },
+
+                        // Hole 2 (Par 3, 160 yds) -> played in 3 shots (Par)
+                        { id: 201, course: "Innerkip Highlands", hole: 2, shot: 1, lie: "Tee", distance: 150, isOverride: false, greenLat: 43.21721, greenLon: -80.68551, shotLat: 43.21621, shotLon: -80.68551, timestamp: "2026-06-18T10:12:00.000Z" },
+                        { id: 202, course: "Innerkip Highlands", hole: 2, shot: 2, lie: "Rough", distance: 8, isOverride: false, greenLat: 43.21721, greenLon: -80.68551, shotLat: 43.21715, shotLon: -80.68551, timestamp: "2026-06-18T10:14:00.000Z" },
+                        { id: 203, course: "Innerkip Highlands", hole: 2, shot: 3, lie: "Green", distance: 2, isOverride: false, greenLat: 43.21721, greenLon: -80.68551, shotLat: 43.21720, shotLon: -80.68551, timestamp: "2026-06-18T10:16:00.000Z" },
+
+                        // Hole 3 (Par 5, 490 yds) -> played in 5 shots (Par)
+                        { id: 301, course: "Innerkip Highlands", hole: 3, shot: 1, lie: "Tee", distance: 250, isOverride: false, greenLat: 43.22021, greenLon: -80.68151, shotLat: 43.21821, shotLon: -80.68151, timestamp: "2026-06-18T10:20:00.000Z" },
+                        { id: 302, course: "Innerkip Highlands", hole: 3, shot: 2, lie: "Fairway", distance: 190, isOverride: false, greenLat: 43.22021, greenLon: -80.68151, shotLat: 43.21921, shotLon: -80.68151, timestamp: "2026-06-18T10:24:00.000Z" },
+                        { id: 303, course: "Innerkip Highlands", hole: 3, shot: 3, lie: "Rough", distance: 40, isOverride: false, greenLat: 43.22021, greenLon: -80.68151, shotLat: 43.22001, shotLon: -80.68151, timestamp: "2026-06-18T10:28:00.000Z" },
+                        { id: 304, course: "Innerkip Highlands", hole: 3, shot: 4, lie: "Green", distance: 9, isOverride: false, greenLat: 43.22021, greenLon: -80.68151, shotLat: 43.22017, shotLon: -80.68151, timestamp: "2026-06-18T10:30:00.000Z" },
+                        { id: 305, course: "Innerkip Highlands", hole: 3, shot: 5, lie: "Green", distance: 1, isOverride: false, greenLat: 43.22021, greenLon: -80.68151, shotLat: 43.22020, shotLon: -80.68151, timestamp: "2026-06-18T10:31:00.000Z" },
+
+                        // Hole 4 (Par 4, 410 yds) -> played in 5 shots (Bogey)
+                        { id: 401, course: "Innerkip Highlands", hole: 4, shot: 1, lie: "Tee", distance: 230, isOverride: false, greenLat: 43.22221, greenLon: -80.68351, shotLat: 43.22121, shotLon: -80.68351, timestamp: "2026-06-18T10:35:00.000Z" },
+                        { id: 402, course: "Innerkip Highlands", hole: 4, shot: 2, lie: "Rough", distance: 130, isOverride: false, greenLat: 43.22221, greenLon: -80.68351, shotLat: 43.22161, shotLon: -80.68351, timestamp: "2026-06-18T10:39:00.000Z" },
+                        { id: 403, course: "Innerkip Highlands", hole: 4, shot: 3, lie: "Sand", distance: 40, isOverride: false, greenLat: 43.22221, greenLon: -80.68351, shotLat: 43.22201, shotLon: -80.68351, timestamp: "2026-06-18T10:42:00.000Z" },
+                        { id: 404, course: "Innerkip Highlands", hole: 4, shot: 4, lie: "Green", distance: 8, isOverride: false, greenLat: 43.22221, greenLon: -80.68351, shotLat: 43.22217, shotLon: -80.68351, timestamp: "2026-06-18T10:44:00.000Z" },
+                        { id: 405, course: "Innerkip Highlands", hole: 4, shot: 5, lie: "Green", distance: 2, isOverride: false, greenLat: 43.22221, greenLon: -80.68351, shotLat: 43.22220, shotLon: -80.68351, timestamp: "2026-06-18T10:45:00.000Z" },
+
+                        // Hole 5 (Par 4, 390 yds) -> played in 3 shots (Birdie!)
+                        { id: 501, course: "Innerkip Highlands", hole: 5, shot: 1, lie: "Tee", distance: 270, isOverride: false, greenLat: 43.22421, greenLon: -80.68551, shotLat: 43.22321, shotLon: -80.68551, timestamp: "2026-06-18T10:49:00.000Z" },
+                        { id: 502, course: "Innerkip Highlands", hole: 5, shot: 2, lie: "Fairway", distance: 110, isOverride: false, greenLat: 43.22421, greenLon: -80.68551, shotLat: 43.22411, shotLon: -80.68551, timestamp: "2026-06-18T10:52:00.000Z" },
+                        { id: 503, course: "Innerkip Highlands", hole: 5, shot: 3, lie: "Green", distance: 10, isOverride: false, greenLat: 43.22421, greenLon: -80.68551, shotLat: 43.22417, shotLon: -80.68551, timestamp: "2026-06-18T10:55:00.000Z" }
+                    ]
+                };
+                
+                localStorage.setItem(key, JSON.stringify([mockRound]));
             }
         }
 
