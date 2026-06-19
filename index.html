@@ -65,9 +65,10 @@
         .pulse-dot {
             animation: pulse-emerald 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-        .custom-green-marker, .custom-tee-marker, .custom-user-marker {
+        .custom-green-marker, .custom-tee-marker, .custom-user-marker, .maplibregl-marker {
             background: transparent;
             border: none;
+            transition: none !important;
         }
         /* Lock HTML viewport */
         html, body {
@@ -1254,31 +1255,51 @@
 
         // 9. Course Setup & Coordinate database manager
         function loadCoursesFromStorage() {
-            const raw = localStorage.getItem('caddyshot_courses_v2');
+            const raw = localStorage.getItem('caddyshot_courses_v3');
             if (raw) {
                 try {
                     courses = JSON.parse(raw);
                 } catch (parseErr) {
-                    console.error('caddyshot_courses_v2 parse failed, resetting:', parseErr);
-                    localStorage.removeItem('caddyshot_courses_v2');
+                    console.error('caddyshot_courses_v3 parse failed, resetting:', parseErr);
+                    localStorage.removeItem('caddyshot_courses_v3');
                     courses = JSON.parse(JSON.stringify(DEFAULT_COURSES));
-                    localStorage.setItem('caddyshot_courses_v2', JSON.stringify(courses));
+                    localStorage.setItem('caddyshot_courses_v3', JSON.stringify(courses));
                 }
             } else {
-                courses = JSON.parse(JSON.stringify(DEFAULT_COURSES));
-                localStorage.setItem('caddyshot_courses_v2', JSON.stringify(courses));
+                // Try migrating from v2 if present, otherwise start fresh
+                const oldRaw = localStorage.getItem('caddyshot_courses_v2');
+                if (oldRaw) {
+                    try {
+                        courses = JSON.parse(oldRaw);
+                    } catch (err) {
+                        courses = JSON.parse(JSON.stringify(DEFAULT_COURSES));
+                    }
+                } else {
+                    courses = JSON.parse(JSON.stringify(DEFAULT_COURSES));
+                }
+                localStorage.setItem('caddyshot_courses_v3', JSON.stringify(courses));
             }
             
             // Merge hardcoded default courses if missing from storage, and delete Pebble Beach
             Object.keys(DEFAULT_COURSES).forEach(key => {
                 if (!courses[key]) {
                     courses[key] = JSON.parse(JSON.stringify(DEFAULT_COURSES[key]));
+                } else {
+                    // Check if holes are missing
+                    if (!courses[key].holes) {
+                        courses[key].holes = {};
+                    }
+                    const defHoles = DEFAULT_COURSES[key].holes;
+                    for (let h in defHoles) {
+                        if (!courses[key].holes[h]) {
+                            courses[key].holes[h] = JSON.parse(JSON.stringify(defHoles[h]));
+                        }
+                    }
                 }
             });
             if (courses["Pebble Beach"]) {
                 delete courses["Pebble Beach"];
             }
-            saveCoursesToStorage();
 
             // Upgrade courses to support multi-tee structure if missing
             Object.keys(courses).forEach(cName => {
@@ -1302,6 +1323,8 @@
                 }
             });
             
+            saveCoursesToStorage();
+            
             const savedActive = localStorage.getItem('caddyshot_active_course');
             if (savedActive && courses[savedActive]) {
                 activeCourse = savedActive;
@@ -1312,7 +1335,7 @@
         }
 
         function saveCoursesToStorage() {
-            localStorage.setItem('caddyshot_courses_v2', JSON.stringify(courses));
+            localStorage.setItem('caddyshot_courses_v3', JSON.stringify(courses));
             localStorage.setItem('caddyshot_active_course', activeCourse);
         }
 
@@ -1846,44 +1869,96 @@
         let isUIVisible = true;
         // NOTE: isDraggingMarker is declared at line 474 (global state block). Removed duplicate here.
 
+        function getOffsetCoordinate(cursorLngLat) {
+            if (!map) return cursorLngLat;
+            const cursorPt = map.project(cursorLngLat);
+            const dotPt = [cursorPt.x - 30, cursorPt.y - 60];
+            return map.unproject(dotPt);
+        }
+
         function makeMarkerDraggable(marker, type) {
             marker.setDraggable(true);
 
             marker.on('dragstart', () => {
                 isDraggingMarker = true;
+                // Visually position the dot 30px left and 60px up from finger to avoid occlusion
+                marker.setOffset([-30, -60]);
             });
 
             marker.on('drag', () => {
-                const lngLat = marker.getLngLat();
+                const cursorLngLat = marker.getLngLat();
+                const actualLngLat = getOffsetCoordinate(cursorLngLat);
+
                 if (type === 'layup') {
-                    layupPoint = { lat: lngLat.lat, lon: lngLat.lng };
+                    layupPoint = { lat: actualLngLat.lat, lon: actualLngLat.lng };
                 } else if (type === 'green') {
-                    tempGreenLoc = { lat: lngLat.lat, lon: lngLat.lng };
+                    tempGreenLoc = { lat: actualLngLat.lat, lon: actualLngLat.lng };
                 } else if (type === 'tee') {
-                    tempTeeLoc = { lat: lngLat.lat, lon: lngLat.lng };
+                    tempTeeLoc = { lat: actualLngLat.lat, lon: actualLngLat.lng };
                 }
                 recalculateDistance(false); // Update paths and distances in real-time, no fitBounds
             });
 
             marker.on('dragend', () => {
                 isDraggingMarker = false;
+                const cursorLngLat = marker.getLngLat();
+                const actualLngLat = getOffsetCoordinate(cursorLngLat);
+
+                // Reset visual offset and position the marker exactly at the drop coordinate
+                marker.setOffset([0, 0]);
+                marker.setLngLat(actualLngLat);
+
+                if (type === 'layup') {
+                    layupPoint = { lat: actualLngLat.lat, lon: actualLngLat.lng };
+                } else if (type === 'green') {
+                    tempGreenLoc = null; // Clear temporary override
+                    const courseData = courses[activeCourse];
+                    if (courseData && courseData.holes && courseData.holes[currentHole]) {
+                        courseData.holes[currentHole].lat = actualLngLat.lat;
+                        courseData.holes[currentHole].lon = actualLngLat.lng;
+                    }
+                    saveCoursesToStorage();
+                } else if (type === 'tee') {
+                    tempTeeLoc = null; // Clear temporary override
+                    const courseData = courses[activeCourse];
+                    if (courseData && courseData.holes && courseData.holes[currentHole]) {
+                        const holeData = courseData.holes[currentHole];
+                        if (activeTeeColor && activeTeeColor !== "Standard" && holeData.tees && holeData.tees[activeTeeColor]) {
+                            holeData.tees[activeTeeColor].lat = actualLngLat.lat;
+                            holeData.tees[activeTeeColor].lon = actualLngLat.lng;
+                        } else {
+                            holeData.teeLat = actualLngLat.lat;
+                            holeData.teeLon = actualLngLat.lng;
+                        }
+                    }
+                    saveCoursesToStorage();
+                }
+
                 recalculateDistance(false);
+                if (type === 'green') {
+                    showToast(`Hole ${currentHole} Pin updated!`);
+                } else if (type === 'tee') {
+                    showToast(`Hole ${currentHole} Tee Box updated!`);
+                }
             });
 
-            // Scale-up on press down for premium "hold and drag" feel
+            // Scale-up on press down (on the inner element to avoid interfering with transform position)
             const el = marker.getElement();
-            el.addEventListener('pointerdown', (e) => {
-                e.stopPropagation(); // prevent map panning
-                el.style.transform = 'scale(1.25)';
-                el.style.transition = 'transform 0.15s ease-out';
-            });
+            const inner = el.firstElementChild;
+            if (inner) {
+                el.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation(); // prevent map panning
+                    inner.style.transform = 'scale(1.25)';
+                    inner.style.transition = 'transform 0.15s ease-out';
+                });
 
-            const resetScale = () => {
-                el.style.transform = '';
-            };
-            el.addEventListener('pointerup', resetScale);
-            el.addEventListener('pointercancel', resetScale);
-            el.addEventListener('pointerout', resetScale);
+                const resetScale = () => {
+                    inner.style.transform = '';
+                };
+                el.addEventListener('pointerup', resetScale);
+                el.addEventListener('pointercancel', resetScale);
+                el.addEventListener('pointerout', resetScale);
+            }
         }
 
         function setLayupPoint(lat, lon) {
