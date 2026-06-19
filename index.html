@@ -340,7 +340,11 @@
                     <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-3">
                         <div class="flex items-center justify-between">
                             <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Select Active Course</label>
-                            <button onclick="deleteCurrentCourse()" id="btnDeleteCourse" class="text-[9px] text-rose-400 hover:underline font-semibold">Delete Course</button>
+                            <div class="flex gap-2.5">
+                                <button onclick="syncActiveCourseWithOSM()" id="btnSyncOSM" class="text-[9px] text-emerald-400 hover:underline font-bold">Sync with OSM</button>
+                                <span class="text-slate-700 text-[9px]">|</span>
+                                <button onclick="deleteCurrentCourse()" id="btnDeleteCourse" class="text-[9px] text-rose-400 hover:underline font-bold">Delete Course</button>
+                            </div>
                         </div>
                         <select id="courseSelect" onchange="onCourseSelectChange()" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-xs text-slate-200 font-bold focus:outline-none focus:border-emerald-500">
                             <!-- Populated by JavaScript -->
@@ -352,7 +356,7 @@
                                 <input type="text" id="newCourseName" placeholder="Course Name (e.g. Oakmont CC)" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-1.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
                                 <div class="flex gap-2">
                                     <button onclick="createNewCourse()" id="btnCreateCourse" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all active:scale-95">
-                                        Import API
+                                        Import OSM
                                     </button>
                                     <button onclick="addCourseManually()" class="flex-1 bg-slate-950/60 border border-slate-800 hover:bg-slate-900 text-slate-300 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all active:scale-95">
                                         Create Manual
@@ -1385,19 +1389,25 @@
             return null;
         }
 
+        function capitalizeFirstLetter(str) {
+            if (!str) return "Standard";
+            return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+        }
+
         // Background task to fetch real coordinates from OSM Overpass API
-        async function fetchAndUpgradeMathematicalCourse(courseName) {
+        async function fetchAndUpgradeMathematicalCourse(courseName, force = false) {
             const courseObj = courses[courseName];
-            if (!courseObj || !courseObj.isMathematical) return;
+            if (!courseObj) return;
+            if (!courseObj.isMathematical && !force) return;
 
             const center = getCourseCenter(courseObj);
             if (!center) return;
 
-            console.log(`Starting background real coordinate fetch for: ${courseName} around (${center.lat}, ${center.lon})`);
-            showToast(`Updating ${courseName} with real GPS coordinates...`);
+            console.log(`Starting real coordinate fetch for: ${courseName} around (${center.lat}, ${center.lon})`);
+            showToast(`Updating ${courseName} from OSM...`);
 
-            // Find all greens, pins, or tees mapped in OSM within 2km of the course center
-            const query = `[out:json];(node["golf"~"green|tee|pin"](around:2000,${center.lat},${center.lon});way["golf"~"green|tee|pin"](around:2000,${center.lat},${center.lon}););out center;`;
+            // Find all greens, pins, or tees mapped in OSM within 2.5km of the course center
+            const query = `[out:json];(node["golf"~"green|tee|pin"](around:2500,${center.lat},${center.lon});way["golf"~"green|tee|pin"](around:2500,${center.lat},${center.lon}););out center;`;
             
             const mirrors = [
                 "https://overpass-api.de/api/interpreter",
@@ -1426,14 +1436,18 @@
 
             if (elements.length === 0) {
                 console.warn(`Could not fetch OSM coordinates for ${courseName}`);
-                // Remove mathematical flag to prevent infinite retries, but keep mathematical coordinates
-                delete courseObj.isMathematical;
-                saveCoursesToStorage();
+                if (!force) {
+                    // Remove mathematical flag to prevent infinite retries, but keep mathematical coordinates
+                    delete courseObj.isMathematical;
+                    saveCoursesToStorage();
+                }
+                showToast(`No OSM elements found for ${courseName}`);
                 return;
             }
 
             let greensFound = 0;
             let teesFound = 0;
+            const maxHoles = Object.keys(courseObj.holes).length;
 
             elements.forEach(el => {
                 const tags = el.tags || {};
@@ -1441,7 +1455,7 @@
                 if (!holeRef) return;
 
                 const holeNum = parseInt(holeRef, 10);
-                if (isNaN(holeNum) || holeNum < 1 || holeNum > 18) return;
+                if (isNaN(holeNum) || holeNum < 1 || holeNum > maxHoles) return;
 
                 const lat = el.center ? el.center.lat : el.lat;
                 const lon = el.center ? el.center.lon : el.lon;
@@ -1456,24 +1470,22 @@
                     hole.lon = lon;
                     greensFound++;
                 } else if (type === 'tee') {
-                    const color = tags.color || tags.tee || tags.name || "Standard";
-                    let normalizedColor = "White"; // Default fallback
-                    const lowerColor = color.toLowerCase();
-                    if (lowerColor.includes("blue")) normalizedColor = "Blue";
-                    else if (lowerColor.includes("white")) normalizedColor = "White";
-                    else if (lowerColor.includes("red")) normalizedColor = "Red";
+                    const rawColor = tags.tee || tags.color || tags.name || "Standard";
+                    const colorList = rawColor.split(';').map(c => capitalizeFirstLetter(c.trim()));
+                    
+                    colorList.forEach(normalizedColor => {
+                        if (!hole.tees[normalizedColor]) {
+                            hole.tees[normalizedColor] = { name: normalizedColor, yardage: 0, slope: 0, rating: 0 };
+                        }
+                        hole.tees[normalizedColor].lat = lat;
+                        hole.tees[normalizedColor].lon = lon;
 
-                    if (!hole.tees[normalizedColor]) {
-                        hole.tees[normalizedColor] = { name: normalizedColor, yardage: 0, slope: 0, rating: 0 };
-                    }
-                    hole.tees[normalizedColor].lat = lat;
-                    hole.tees[normalizedColor].lon = lon;
-
-                    // Sync standard tee coordinates
-                    if (normalizedColor === activeTeeColor || !hole.teeLat) {
-                        hole.teeLat = lat;
-                        hole.teeLon = lon;
-                    }
+                        // Sync standard tee coordinates
+                        if (!hole.teeLat || normalizedColor === "Standard" || normalizedColor === "White") {
+                            hole.teeLat = lat;
+                            hole.teeLon = lon;
+                        }
+                    });
                     teesFound++;
                 }
             });
@@ -1486,7 +1498,9 @@
             saveCoursesToStorage();
 
             if (courseName === activeCourse) {
-                showToast(`Real coordinates loaded for ${courseName}!`);
+                showToast(`Synced ${courseName} with OSM!`);
+                updateTeeColorDropdown();
+                renderHolesEditorInputs();
                 updateUI();
                 recalculateDistance(true);
             }
@@ -1657,22 +1671,19 @@
                 return;
             }
 
-            // Use id-based lookup instead of attribute selector (avoids quote-nesting
-            // fragility where the HTML attribute delimiter conflicts with the JS string).
             const addBtn = document.getElementById('btnCreateCourse');
-            const originalBtnText = addBtn ? addBtn.innerText : "Add";
+            const originalBtnText = addBtn ? addBtn.innerText : "Import";
             if (addBtn) {
                 addBtn.innerText = "Searching...";
                 addBtn.disabled = true;
             }
 
             try {
-                const apiKey = "XYXTXD66FBLM57CPBDVLWDOQCU";
-                // Query search endpoint
-                const searchResponse = await fetch(`https://api.golfcourseapi.com/v1/search?search_query=${encodeURIComponent(name)}`, {
+                // Search Nominatim for the course location
+                const searchUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}+golf&format=json&limit=5`;
+                const searchResponse = await fetch(searchUrl, {
                     headers: {
-                        "Authorization": `Key ${apiKey}`,
-                        "Content-Type": "application/json"
+                        "Accept": "application/json"
                     }
                 });
 
@@ -1680,125 +1691,175 @@
                     throw new Error(`Search failed: HTTP_${searchResponse.status}`);
                 }
 
-                const searchData = await searchResponse.json();
-                const rawCourses = searchData.courses || searchData.data || [];
+                let searchData = await searchResponse.json();
+                if (!searchData || searchData.length === 0) {
+                    // Try without appending "golf"
+                    const fallbackSearchUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=5`;
+                    const fallbackResponse = await fetch(fallbackSearchUrl);
+                    searchData = await fallbackResponse.json();
+                    if (!searchData || searchData.length === 0) {
+                        showToast("Course not found on OSM. Creating local blank course.");
+                        createBlankCourseFallback(name);
+                        return;
+                    }
+                }
 
-                if (rawCourses.length === 0) {
-                    showToast("No courses found in database. Creating local blank course.");
-                    createBlankCourseFallback(name);
+                const match = searchData[0];
+                const centerLat = parseFloat(match.lat);
+                const centerLon = parseFloat(match.lon);
+                const osmName = match.display_name.split(',')[0];
+
+                showToast(`Found: ${osmName}. Querying OSM layout...`);
+
+                // Query Overpass for golf elements around the center
+                const query = `[out:json];(node["golf"~"green|tee|pin"](around:2500,${centerLat},${centerLon});way["golf"~"green|tee|pin"](around:2500,${centerLat},${centerLon}););out center;`;
+                
+                const mirrors = [
+                    "https://overpass-api.de/api/interpreter",
+                    "https://overpass.kumi.systems/api/interpreter",
+                    "https://overpass.nchc.org.tw/api/interpreter"
+                ];
+
+                let elements = [];
+                for (let mirror of mirrors) {
+                    try {
+                        const url = `${mirror}?data=${encodeURIComponent(query)}`;
+                        const response = await fetch(url, {
+                            headers: { "Accept": "application/json" }
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data && data.elements && data.elements.length > 0) {
+                                elements = data.elements;
+                                break;
+                            }
+                        }
+                    } catch (err) {
+                        console.warn(`OSM mirror ${mirror} failed:`, err);
+                    }
+                }
+
+                if (elements.length === 0) {
+                    showToast("No greens or tees found in OSM for this area. Creating blank course.");
+                    createBlankCourseFallback(osmName, centerLat, centerLon);
                     return;
                 }
 
-                const matchedCourse = rawCourses[0];
-                const courseId = matchedCourse.id;
-
-                showToast(`Course found. Importing details...`);
-                // Query course details endpoint
-                const detailsResponse = await fetch(`https://api.golfcourseapi.com/v1/courses/${courseId}`, {
-                    headers: {
-                        "Authorization": `Key ${apiKey}`,
-                        "Content-Type": "application/json"
-                    }
-                });
-
-                if (!detailsResponse.ok) {
-                    throw new Error(`Details fetch failed: HTTP_${detailsResponse.status}`);
-                }
-
-                const detailsData = await detailsResponse.json();
-                const courseName = detailsData.course_name || detailsData.name || matchedCourse.course_name || name;
-
-                const newCourse = {
-                    name: courseName,
-                    id: courseId,
-                    holes: {},
-                    isMathematical: true
-                };
-
-                const rawHoles = detailsData.holes || [];
-                for (let i = 1; i <= 18; i++) {
-                    let rawHole = null;
-                    if (Array.isArray(rawHoles)) {
-                        rawHole = rawHoles.find(h => h.number === i || h.hole_number === i) || rawHoles[i - 1];
-                    } else if (rawHoles && typeof rawHoles === 'object') {
-                        rawHole = rawHoles[i];
-                    }
-                    rawHole = rawHole || {};
-
-                    const greenLat = Number(rawHole.green_latitude || rawHole.green_lat || rawHole.latitude || (rawHole.green && (rawHole.green.latitude || rawHole.green.lat)) || detailsData.latitude || (detailsData.location && detailsData.location.latitude) || 36.568600);
-                    const greenLon = Number(rawHole.green_longitude || rawHole.green_lon || rawHole.longitude || (rawHole.green && (rawHole.green.longitude || rawHole.green.lon)) || detailsData.longitude || (detailsData.location && detailsData.location.longitude) || -121.948200);
-
-                    const tees = {};
-                    let rawTees = rawHole.tees || rawHole.tee_boxes || [];
-                    
-                    if ((!rawTees || rawTees.length === 0) && detailsData.tees) {
-                        if (Array.isArray(detailsData.tees)) {
-                            rawTees = detailsData.tees;
-                        } else if (typeof detailsData.tees === 'object') {
-                            rawTees = [...(detailsData.tees.male || []), ...(detailsData.tees.female || [])];
+                // Determine number of holes from maximum ref found in elements
+                let maxHole = 18;
+                let holeRefs = [];
+                elements.forEach(el => {
+                    const tags = el.tags || {};
+                    const holeRef = tags.ref || tags.hole;
+                    if (holeRef) {
+                        const hNum = parseInt(holeRef, 10);
+                        if (!isNaN(hNum) && hNum > 0 && hNum <= 36) {
+                            holeRefs.push(hNum);
                         }
                     }
+                });
+                if (holeRefs.length > 0) {
+                    const foundMax = Math.max(...holeRefs);
+                    if (foundMax <= 9) maxHole = 9;
+                    else if (foundMax <= 18) maxHole = 18;
+                    else if (foundMax <= 27) maxHole = 27;
+                    else maxHole = 36;
+                }
 
-                    if (Array.isArray(rawTees) && rawTees.length > 0) {
-                        rawTees.forEach(t => {
-                            const color = t.tee_name || t.color || t.name || "Standard";
-                            const tLat = Number(t.latitude || t.lat || (greenLat - 0.0012));
-                            const tLon = Number(t.longitude || t.lon || greenLon);
-                            tees[color] = {
-                                name: color,
-                                lat: tLat,
-                                lon: tLon,
-                                yardage: t.yardage || 0,
-                                slope: t.slope_rating || t.slope || 0,
-                                rating: t.course_rating || t.rating || 0
-                            };
-                        });
-                    }
+                const newCourse = {
+                    name: osmName,
+                    holes: {},
+                    isRealOSM: true
+                };
 
-                    if (Object.keys(tees).length === 0) {
-                        tees["Standard"] = {
-                            name: "Standard",
-                            lat: greenLat - 0.0012,
-                            lon: greenLon,
-                            yardage: 0,
-                            slope: 0,
-                            rating: 0
-                        };
-                    }
-
+                for (let i = 1; i <= maxHole; i++) {
+                    const angle = (i * 2 * Math.PI) / maxHole;
+                    const distance = 0.0025 + (i * 0.0001);
+                    const fallbackLat = centerLat + Math.sin(angle) * distance;
+                    const fallbackLon = centerLon + Math.cos(angle) * distance;
+                    
                     newCourse.holes[i] = {
-                        name: rawHole.name || `Hole ${i}`,
-                        lat: greenLat,
-                        lon: greenLon,
-                        tees: tees,
-                        // Legacy support properties
-                        teeLat: Object.values(tees)[0].lat,
-                        teeLon: Object.values(tees)[0].lon
+                        name: `Hole ${i}`,
+                        lat: fallbackLat,
+                        lon: fallbackLon,
+                        tees: {
+                            "Standard": {
+                                name: "Standard",
+                                lat: fallbackLat - 0.0012,
+                                lon: fallbackLon,
+                                yardage: 0,
+                                slope: 0,
+                                rating: 0
+                            }
+                        },
+                        teeLat: fallbackLat - 0.0012,
+                        teeLon: fallbackLon
                     };
                 }
 
-                courses[courseName] = newCourse;
-                activeCourse = courseName;
+                let greensFound = 0;
+                let teesFound = 0;
+
+                elements.forEach(el => {
+                    const tags = el.tags || {};
+                    const holeRef = tags.ref || tags.hole;
+                    if (!holeRef) return;
+
+                    const holeNum = parseInt(holeRef, 10);
+                    if (isNaN(holeNum) || holeNum < 1 || holeNum > maxHole) return;
+
+                    const lat = el.center ? el.center.lat : el.lat;
+                    const lon = el.center ? el.center.lon : el.lon;
+                    if (!lat || !lon) return;
+
+                    const hole = newCourse.holes[holeNum];
+                    if (!hole) return;
+
+                    const type = tags.golf;
+                    if (type === 'green' || type === 'pin') {
+                        hole.lat = lat;
+                        hole.lon = lon;
+                        greensFound++;
+                    } else if (type === 'tee') {
+                        const rawColor = tags.tee || tags.color || tags.name || "Standard";
+                        const colorList = rawColor.split(';').map(c => capitalizeFirstLetter(c.trim()));
+                        
+                        colorList.forEach(normalizedColor => {
+                            if (!hole.tees[normalizedColor]) {
+                                hole.tees[normalizedColor] = { name: normalizedColor, yardage: 0, slope: 0, rating: 0 };
+                            }
+                            hole.tees[normalizedColor].lat = lat;
+                            hole.tees[normalizedColor].lon = lon;
+
+                            if (!hole.teeLat || normalizedColor === "Standard" || normalizedColor === "White") {
+                                hole.teeLat = lat;
+                                hole.teeLon = lon;
+                            }
+                        });
+                        teesFound++;
+                    }
+                });
+
+                courses[osmName] = newCourse;
+                activeCourse = osmName;
                 saveCoursesToStorage();
                 input.value = '';
 
-                // Set initial active tee color
                 activeTeeColor = Object.keys(newCourse.holes[1].tees)[0] || "Standard";
                 updateTeeColorDropdown();
 
                 populateCourseSelectDropdown();
                 renderHolesEditorInputs();
                 
-                showToast(`Imported Course: ${courseName}`);
+                showToast(`Imported Course: ${osmName} (${greensFound} greens, ${teesFound} tees)`);
                 
                 currentHole = 1;
                 currentShot = 1;
                 updateUI();
                 recalculateDistance(true);
-                fetchAndUpgradeMathematicalCourse(courseName);
             } catch (error) {
-                console.error("GolfCourseAPI import error, fallback to blank course:", error);
-                showToast("API import failed. Creating local blank course.");
+                console.error("OSM import error:", error);
+                showToast("OSM import failed. Creating local blank course.");
                 createBlankCourseFallback(name);
             } finally {
                 if (addBtn) {
@@ -1808,27 +1869,43 @@
             }
         }
 
-        function createBlankCourseFallback(name) {
+        function createBlankCourseFallback(name, lat, lon) {
+            let centerLat = lat || 43.21521;
+            let centerLon = lon || -80.68751;
+            
+            if (!lat && !lon) {
+                if (userLocation) {
+                    centerLat = userLocation.lat;
+                    centerLon = userLocation.lon;
+                }
+            }
+
             const newHoles = {};
             for (let i = 1; i <= 18; i++) {
-                const baseLat = 36.568600 + (i * 0.0002);
-                const baseLon = -121.948200 + (i * 0.0002);
+                const angle = (i * 2 * Math.PI) / 18;
+                const distance = 0.0025 + (i * 0.0001);
+                const hLat = centerLat + Math.sin(angle) * distance;
+                const hLon = centerLon + Math.cos(angle) * distance;
+                
+                const teeLat = hLat - 0.0010 * Math.sin(angle);
+                const teeLon = hLon - 0.0010 * Math.cos(angle);
+
                 newHoles[i] = {
                     name: `Hole ${i}`,
-                    lat: baseLat,
-                    lon: baseLon,
+                    lat: hLat,
+                    lon: hLon,
                     tees: {
                         "Standard": {
                             name: "Standard",
-                            lat: baseLat - 0.0012,
-                            lon: baseLon,
+                            lat: teeLat,
+                            lon: teeLon,
                             yardage: 0,
                             slope: 0,
                             rating: 0
                         }
                     },
-                    teeLat: baseLat - 0.0012,
-                    teeLon: baseLon
+                    teeLat: teeLat,
+                    teeLon: teeLon
                 };
             }
 
@@ -1869,9 +1946,35 @@
                 return;
             }
 
-            createBlankCourseFallback(name);
+            let lat = null;
+            let lon = null;
+            if (userLocation) {
+                lat = userLocation.lat;
+                lon = userLocation.lon;
+            }
+
+            createBlankCourseFallback(name, lat, lon);
             showToast(`Created Course: ${name}`);
             fetchAndUpgradeMathematicalCourse(name);
+        }
+
+        async function syncActiveCourseWithOSM() {
+            const btn = document.getElementById('btnSyncOSM');
+            if (btn) {
+                btn.innerText = "Syncing...";
+                btn.disabled = true;
+            }
+            try {
+                await fetchAndUpgradeMathematicalCourse(activeCourse, true);
+            } catch (err) {
+                console.error("OSM Sync error:", err);
+                showToast("OSM Sync failed.");
+            } finally {
+                if (btn) {
+                    btn.innerText = "Sync with OSM";
+                    btn.disabled = false;
+                }
+            }
         }
 
         function deleteCurrentCourse() {
