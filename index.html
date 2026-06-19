@@ -1731,6 +1731,42 @@
             return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
         }
 
+        function extractTeeColors(tags) {
+            const colorsFound = new Set();
+            const standardKeys = ['teebox', 'tee', 'color', 'name'];
+            standardKeys.forEach(k => {
+                if (tags[k]) {
+                    const val = tags[k].toString().trim();
+                    if (val && val.toLowerCase() !== 'yes' && val.toLowerCase() !== 'true') {
+                        val.split(';').forEach(c => {
+                            if (c.trim()) colorsFound.add(capitalizeFirstLetter(c.trim()));
+                        });
+                    }
+                }
+            });
+
+            Object.keys(tags).forEach(k => {
+                const lowerKey = k.toLowerCase();
+                if (lowerKey.includes('tee') || lowerKey.includes('color')) {
+                    if (lowerKey === 'golf' || lowerKey === 'hole' || lowerKey === 'ref') return;
+                    const knownColors = ['blue', 'orange', 'white', 'red', 'gold', 'yellow', 'black', 'green', 'silver'];
+                    knownColors.forEach(color => {
+                        if (lowerKey.includes(color)) {
+                            const val = tags[k].toString().trim().toLowerCase();
+                            if (val === 'yes' || val === 'true' || val === color) {
+                                colorsFound.add(capitalizeFirstLetter(color));
+                            }
+                        }
+                    });
+                }
+            });
+
+            if (colorsFound.size === 0) {
+                colorsFound.add("Standard");
+            }
+            return Array.from(colorsFound);
+        }
+
         // Background task to fetch real coordinates from OSM Overpass API
         async function fetchAndUpgradeMathematicalCourse(courseName, force = false) {
             const courseObj = courses[courseName];
@@ -1744,7 +1780,7 @@
             showToast(`Updating ${courseName} from OSM...`);
 
             // Find all greens, pins, or tees mapped in OSM within 2.5km of the course center
-            const query = `[out:json];(node["golf"~"green|tee|pin"](around:2500,${center.lat},${center.lon});way["golf"~"green|tee|pin"](around:2500,${center.lat},${center.lon}););out center;`;
+            const query = `[out:json];(node["golf"~"green|tee|teebox|pin"](around:2500,${center.lat},${center.lon});way["golf"~"green|tee|teebox|pin"](around:2500,${center.lat},${center.lon}););out center;`;
             
             const mirrors = [
                 "https://overpass-api.de/api/interpreter",
@@ -1785,6 +1821,7 @@
             let greensFound = 0;
             let teesFound = 0;
             const maxHoles = Object.keys(courseObj.holes).length;
+            const updatedTeeHoles = new Set();
 
             elements.forEach(el => {
                 const tags = el.tags || {};
@@ -1806,21 +1843,27 @@
                     hole.lat = lat;
                     hole.lon = lon;
                     greensFound++;
-                } else if (type === 'tee') {
-                    const rawColor = tags.teebox || tags.tee || tags.color || tags.name || "Standard";
-                    const colorList = rawColor.split(';').map(c => capitalizeFirstLetter(c.trim()));
+                } else if (type === 'tee' || type === 'teebox') {
+                    const colorList = extractTeeColors(tags);
                     
                     colorList.forEach(normalizedColor => {
+                        if (!hole.tees) {
+                            hole.tees = {};
+                        }
                         if (!hole.tees[normalizedColor]) {
                             hole.tees[normalizedColor] = { name: normalizedColor, yardage: 0, slope: 0, rating: 0 };
                         }
                         hole.tees[normalizedColor].lat = lat;
                         hole.tees[normalizedColor].lon = lon;
 
-                        // Sync standard tee coordinates
-                        if (!hole.teeLat || normalizedColor === "Standard" || normalizedColor === "White") {
+                        // Sync standard/fallback tee coordinates
+                        if (normalizedColor === activeTeeColor || 
+                            normalizedColor === "Standard" || 
+                            normalizedColor === "White" || 
+                            !updatedTeeHoles.has(holeNum)) {
                             hole.teeLat = lat;
                             hole.teeLon = lon;
+                            updatedTeeHoles.add(holeNum);
                         }
                     });
                     teesFound++;
@@ -2049,7 +2092,7 @@
                 showToast(`Found: ${osmName}. Querying OSM layout...`);
 
                 // Query Overpass for golf elements around the center
-                const query = `[out:json];(node["golf"~"green|tee|pin"](around:2500,${centerLat},${centerLon});way["golf"~"green|tee|pin"](around:2500,${centerLat},${centerLon}););out center;`;
+                const query = `[out:json];(node["golf"~"green|tee|teebox|pin"](around:2500,${centerLat},${centerLon});way["golf"~"green|tee|teebox|pin"](around:2500,${centerLat},${centerLon}););out center;`;
                 
                 const mirrors = [
                     "https://overpass-api.de/api/interpreter",
@@ -2136,6 +2179,7 @@
 
                 let greensFound = 0;
                 let teesFound = 0;
+                const updatedTeeHoles = new Set();
 
                 elements.forEach(el => {
                     const tags = el.tags || {};
@@ -2157,9 +2201,8 @@
                         hole.lat = lat;
                         hole.lon = lon;
                         greensFound++;
-                    } else if (type === 'tee') {
-                        const rawColor = tags.teebox || tags.tee || tags.color || tags.name || "Standard";
-                        const colorList = rawColor.split(';').map(c => capitalizeFirstLetter(c.trim()));
+                    } else if (type === 'tee' || type === 'teebox') {
+                        const colorList = extractTeeColors(tags);
                         
                         colorList.forEach(normalizedColor => {
                             if (!hole.tees[normalizedColor]) {
@@ -2168,9 +2211,13 @@
                             hole.tees[normalizedColor].lat = lat;
                             hole.tees[normalizedColor].lon = lon;
 
-                            if (!hole.teeLat || normalizedColor === "Standard" || normalizedColor === "White") {
+                            if (normalizedColor === activeTeeColor || 
+                                normalizedColor === "Standard" || 
+                                normalizedColor === "White" || 
+                                !updatedTeeHoles.has(holeNum)) {
                                 hole.teeLat = lat;
                                 hole.teeLon = lon;
+                                updatedTeeHoles.add(holeNum);
                             }
                         });
                         teesFound++;
