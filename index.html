@@ -684,13 +684,18 @@
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="border-t border-slate-800 pt-3 flex gap-2">
-                    <button onclick="closeCourseModal()" class="flex-1 bg-slate-850 hover:bg-slate-800 border border-slate-800 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-300">
-                        Close
-                    </button>
-                    <button onclick="saveCourseSettings()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-950">
-                        Save Coordinates
-                    </button>
+                <div class="border-t border-slate-800 pt-3 flex flex-col gap-2">
+                    <div class="flex gap-2">
+                        <button onclick="closeCourseModal()" class="flex-1 bg-slate-850 hover:bg-slate-800 border border-slate-800 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-300">
+                            Close
+                        </button>
+                        <button onclick="saveCourseSettings()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider text-slate-950">
+                            Save Coordinates
+                        </button>
+                    </div>
+                    <div class="text-center text-[9px] text-slate-600 font-medium tracking-wide mt-1">
+                        CaddyShot v1.3 // OSM Custom Key Engine (Build v18)
+                    </div>
                 </div>
 
             </div>
@@ -746,6 +751,7 @@
                     lon: hLon,
                     tees: {
                         "Blue": { name: "Blue", lat: teeLat + 0.00008, lon: teeLon + 0.00008, yardage: 380, slope: 120, rating: 70 },
+                        "Orange": { name: "Orange", lat: teeLat + 0.00004, lon: teeLon + 0.00004, yardage: 365, slope: 118, rating: 69 },
                         "White": { name: "White", lat: teeLat, lon: teeLon, yardage: 350, slope: 115, rating: 68 },
                         "Red": { name: "Red", lat: teeLat - 0.00008, lon: teeLon - 0.00008, yardage: 315, slope: 110, rating: 66 }
                     },
@@ -1671,23 +1677,39 @@
                 delete courses["Pebble Beach"];
             }
 
-            // Upgrade courses to support multi-tee structure if missing
+            // Upgrade courses to support multi-tee structure if missing, and inject Orange tee for Innerkip Highlands
             Object.keys(courses).forEach(cName => {
                 const c = courses[cName];
                 if (c && c.holes) {
                     Object.keys(c.holes).forEach(hNum => {
                         const hole = c.holes[hNum];
-                        if (hole && !hole.tees) {
-                            hole.tees = {
-                                "Standard": {
-                                    name: "Standard",
-                                    lat: hole.teeLat || (hole.lat - 0.0012),
-                                    lon: hole.teeLon || hole.lon,
-                                    yardage: 0,
-                                    slope: 0,
-                                    rating: 0
-                                }
-                            };
+                        if (hole) {
+                            if (!hole.tees) {
+                                hole.tees = {
+                                    "Standard": {
+                                        name: "Standard",
+                                        lat: hole.teeLat || (hole.lat - 0.0012),
+                                        lon: hole.teeLon || hole.lon,
+                                        yardage: 0,
+                                        slope: 0,
+                                        rating: 0
+                                    }
+                                };
+                            }
+                            // Inject Orange tee dynamically for Innerkip Highlands if it is mathematical or has no Orange tee yet
+                            if (cName === "Innerkip Highlands" && (!c.isRealOSM || c.isMathematical) && !hole.tees["Orange"]) {
+                                const angle = (parseInt(hNum, 10) * 2 * Math.PI) / 18;
+                                const teeLat = hole.teeLat || (hole.lat - 0.0012);
+                                const teeLon = hole.teeLon || hole.lon;
+                                hole.tees["Orange"] = {
+                                    name: "Orange",
+                                    lat: teeLat + 0.00004,
+                                    lon: teeLon + 0.00004,
+                                    yardage: 365,
+                                    slope: 118,
+                                    rating: 69
+                                };
+                            }
                         }
                     });
                 }
@@ -1832,6 +1854,11 @@
                 return;
             }
 
+            // Clear mathematical or old tees before populating from real OSM data
+            for (let h in courseObj.holes) {
+                courseObj.holes[h].tees = {};
+            }
+
             let greensFound = 0;
             let teesFound = 0;
             const maxHoles = Object.keys(courseObj.holes).length;
@@ -1839,7 +1866,7 @@
 
             elements.forEach(el => {
                 const tags = el.tags || {};
-                let holeRef = tags.ref || tags.Hole || tags.hole;
+                let holeRef = tags.ref || tags.Hole || tags.hole || tags.tee;
                 if (!holeRef && tags.name) {
                     const match = tags.name.match(/\d+/);
                     if (match) holeRef = match[0];
@@ -1911,7 +1938,11 @@
             saveCoursesToStorage();
 
             if (courseName === activeCourse) {
-                showToast(`Synced ${courseName} with OSM!`);
+                if (greensFound === 0 && teesFound === 0) {
+                    showToast(`0 elements found. Check your OSM tags or wait for mirror replication.`, 6000);
+                } else {
+                    showToast(`OSM Synced! Found ${greensFound} greens and ${teesFound} tees.`, 4000);
+                }
                 updateTeeColorDropdown();
                 renderHolesEditorInputs();
                 updateUI();
@@ -2163,7 +2194,7 @@
                 let holeRefs = [];
                 elements.forEach(el => {
                     const tags = el.tags || {};
-                    let holeRef = tags.ref || tags.Hole || tags.hole;
+                    let holeRef = tags.ref || tags.Hole || tags.hole || tags.tee;
                     if (holeRef) {
                         const hNum = parseInt(holeRef, 10);
                         if (!isNaN(hNum) && hNum > 0 && hNum <= 36) {
@@ -2216,7 +2247,7 @@
 
                 elements.forEach(el => {
                     const tags = el.tags || {};
-                    let holeRef = tags.ref || tags.Hole || tags.hole;
+                    let holeRef = tags.ref || tags.Hole || tags.hole || tags.tee;
                     if (!holeRef && tags.name) {
                         const match = tags.name.match(/\d+/);
                         if (match) holeRef = match[0];
@@ -2257,6 +2288,9 @@
                         const colorList = extractTeeColors(tags);
                         
                         colorList.forEach(normalizedColor => {
+                            if (hole.tees["Standard"]) {
+                                delete hole.tees["Standard"];
+                            }
                             if (!hole.tees[normalizedColor]) {
                                 hole.tees[normalizedColor] = { name: normalizedColor, yardage: 0, slope: 0, rating: 0 };
                             }
@@ -4468,7 +4502,7 @@
         }
 
         // Flash toast message
-        function showToast(msg) {
+        function showToast(msg, duration = 2300) {
             const toast = document.getElementById('toastAlert');
             const message = document.getElementById('toastMessage');
             if (!toast || !message) return;
@@ -4476,9 +4510,10 @@
             message.innerText = msg;
             toast.className = "absolute bottom-32 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/95 text-white font-semibold text-xs py-2.5 px-5 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 transition-all duration-300 transform scale-100 opacity-100";
             
-            setTimeout(() => {
+            if (window.toastTimeout) clearTimeout(window.toastTimeout);
+            window.toastTimeout = setTimeout(() => {
                 toast.className = "pointer-events-none opacity-0 transform translate-y-3 transition-all duration-300 absolute bottom-32 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600/90 text-white font-semibold text-xs py-2 px-4 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5";
-            }, 2300);
+            }, duration);
         }
     </script>
 </body>
