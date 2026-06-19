@@ -1494,7 +1494,7 @@
                     hole.lon = lon;
                     greensFound++;
                 } else if (type === 'tee') {
-                    const rawColor = tags.tee || tags.color || tags.name || "Standard";
+                    const rawColor = tags.teebox || tags.tee || tags.color || tags.name || "Standard";
                     const colorList = rawColor.split(';').map(c => capitalizeFirstLetter(c.trim()));
                     
                     colorList.forEach(normalizedColor => {
@@ -1845,7 +1845,7 @@
                         hole.lon = lon;
                         greensFound++;
                     } else if (type === 'tee') {
-                        const rawColor = tags.tee || tags.color || tags.name || "Standard";
+                        const rawColor = tags.teebox || tags.tee || tags.color || tags.name || "Standard";
                         const colorList = rawColor.split(';').map(c => capitalizeFirstLetter(c.trim()));
                         
                         colorList.forEach(normalizedColor => {
